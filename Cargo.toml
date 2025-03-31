@@ -1,0 +1,11 @@
+[package]
+name = "counter-array"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.97"
+common_traits = "0.11.2"
+sux = "0.7.2"
+sync-cell-slice = "0.9.11"
+xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
