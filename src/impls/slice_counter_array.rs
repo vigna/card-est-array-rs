@@ -7,7 +7,6 @@
 
 use super::DefaultCounter;
 use crate::traits::*;
-use anyhow::Result;
 use sux::traits::Word;
 use sync_cell_slice::{SyncCell, SyncSlice};
 
@@ -123,30 +122,14 @@ impl<L: SliceCounterLogic<W>, W: Word> SliceCounterArray<L, W, Box<[W]>> {
     /// # Arguments
     /// * `logic`: the counter logic to use.
     /// * `len`: the number of the counters in the array.
-    pub fn new(logic: L, len: usize) -> Result<Self> {
+    pub fn new(logic: L, len: usize) -> Self {
         let num_backend_len = logic.backend_len();
         let backend = vec![W::ZERO; len * num_backend_len].into();
-        Ok(Self {
+        Self {
             logic,
             backend,
             _marker: std::marker::PhantomData,
-        })
-    }
-
-    /// Creates a new counter slice with the provided logic allocating memory
-    /// by memory mapping, using the provided options.
-    ///
-    /// # Arguments
-    /// * `logic`: the counter logic to use.
-    /// * `len`: the number of the counters in the array.
-    pub fn with_mmap(logic: L, len: usize) -> Result<Self> {
-        let num_backend_len = logic.backend_len();
-        let backend = vec![W::ZERO; len * num_backend_len].into();
-        Ok(Self {
-            logic,
-            backend,
-            _marker: std::marker::PhantomData,
-        })
+        }
     }
 }
 
