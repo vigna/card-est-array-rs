@@ -180,7 +180,7 @@ impl<
             if value == 0 {
                 zeroes += 1;
             }
-            harmonic_mean += 1.0 / (1 << value) as f64;
+            harmonic_mean += 1.0 / (1_u64 << value) as f64;
         }
 
         let mut estimate = self.alpha_m_m / harmonic_mean;
