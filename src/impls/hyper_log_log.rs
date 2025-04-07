@@ -44,7 +44,7 @@ pub struct HyperLogLog<T, H, W> {
     log_2_num_registers: usize,
     sentinel_mask: HashResult,
     num_registers: usize,
-    pub(super) words_per_counter: usize,
+    pub(super) words_per_estimator: usize,
     alpha_m_m: f64,
     msb_mask: Box<[W]>,
     lsb_mask: Box<[W]>,
@@ -62,7 +62,7 @@ impl<T, H: Clone, W: Clone> Clone for HyperLogLog<T, H, W> {
             log_2_num_registers: self.log_2_num_registers,
             sentinel_mask: self.sentinel_mask,
             num_registers: self.num_registers,
-            words_per_counter: self.words_per_counter,
+            words_per_estimator: self.words_per_estimator,
             alpha_m_m: self.alpha_m_m,
             msb_mask: self.msb_mask.clone(),
             lsb_mask: self.lsb_mask.clone(),
@@ -127,7 +127,7 @@ impl<
     > SliceEstimationLogic<W> for HyperLogLog<T, H, W>
 {
     fn backend_len(&self) -> usize {
-        self.words_per_counter
+        self.words_per_estimator
     }
 }
 
@@ -149,7 +149,7 @@ impl<
     fn new_estimator(&self) -> Self::Estimator<'_> {
         Self::Estimator::new(
             self,
-            vec![W::ZERO; self.words_per_counter].into_boxed_slice(),
+            vec![W::ZERO; self.words_per_estimator].into_boxed_slice(),
         )
     }
 
@@ -216,8 +216,8 @@ impl<
 
     fn new_helper(&self) -> Self::Helper {
         HyperLogLogHelper {
-            acc: vec![W::ZERO; self.words_per_counter],
-            mask: vec![W::ZERO; self.words_per_counter],
+            acc: vec![W::ZERO; self.words_per_estimator],
+            mask: vec![W::ZERO; self.words_per_estimator],
         }
     }
 
@@ -234,7 +234,7 @@ impl<
     }
 }
 
-/// Builds a [`HyperLogLog`] counter logic.
+/// Builds a [`HyperLogLog`] cardinality-estimator logic.
 #[derive(Debug, Clone)]
 pub struct HyperLogLogBuilder<H, W = usize> {
     build_hasher: H,
@@ -272,7 +272,7 @@ fn min_alignment(bits: usize) -> String {
 }
 
 impl HyperLogLog<(), (), ()> {
-    /// Returns the logarithm of the number of registers per counter that are
+    /// Returns the logarithm of the number of registers per estimator that are
     /// necessary to attain a given relative standard deviation.
     ///
     /// # Arguments
@@ -282,12 +282,12 @@ impl HyperLogLog<(), (), ()> {
     }
 
     /// Returns the relative standard deviation corresponding to a given number
-    /// of registers per counter.
+    /// of registers per estimator.
     ///
     /// # Arguments
     ///
     /// * `log_2_num_registers`: the logarithm of the number of registers per
-    ///   counter.
+    ///   estimator.
     pub fn rel_std(log_2_num_registers: usize) -> f64 {
         let tmp = match log_2_num_registers {
             4 => 1.106,
@@ -326,11 +326,12 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
     /// Sets the base-2 logarithm of the number of register.
     ///
     /// ## Note
-    /// This is a low-level alternative to [`Self::rsd`].
-    /// Calling one after the other invalidates the work done by the first one.
+    /// This is a low-level alternative to [`Self::rsd`]. Calling one after the
+    /// other invalidates the work done by the first one.
     ///
     /// # Arguments
-    /// * `log_2_num_registers`: the logarithm of the number of registers per counter.
+    /// * `log_2_num_registers`: the logarithm of the number of registers per
+    ///   estimator.
     pub fn log_2_num_reg(mut self, log_2_num_registers: usize) -> Self {
         self.log_2_num_registers = log_2_num_registers;
         self
@@ -376,15 +377,15 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
     /// # Errors
     ///
     /// Errors will be caused by consistency checks (at least 16 registers per
-    /// counter, backend bits divisible exactly `W::BITS`)
+    /// estimator, backend bits divisible exactly `W::BITS`)
     pub fn build<T>(self) -> Result<HyperLogLog<T, H, W>> {
         let log_2_num_registers = self.log_2_num_registers;
         let num_elements = self.n;
 
-        // This ensures counters are at least 16-bit-aligned.
+        // This ensures estimators are at least 16-bit-aligned.
         ensure!(
             log_2_num_registers >= 4,
-            "the logarithm of the number of registers per counter should be at least 4; got {}",
+            "the logarithm of the number of registers per estimator should be at least 4; got {}",
             log_2_num_registers
         );
 
@@ -399,15 +400,15 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
         };
         let num_registers_minus_1 = (number_of_registers - 1) as HashResult;
 
-        let counter_size_in_bits = number_of_registers * register_size;
+        let est_size_in_bits = number_of_registers * register_size;
 
-        // This ensures counters are always aligned to W
+        // This ensures estimators are always aligned to W
         ensure!(
-            counter_size_in_bits % W::BITS == 0,
-            "W should allow counter backends to be aligned. Use {} or smaller unsigned integer types",
-            min_alignment(counter_size_in_bits)
+            est_size_in_bits % W::BITS == 0,
+            "W should allow estimator backends to be aligned. Use {} or smaller unsigned integer types",
+            min_alignment(est_size_in_bits)
         );
-        let counter_size_in_words = counter_size_in_bits / W::BITS;
+        let est_size_in_words = est_size_in_bits / W::BITS;
 
         let mut msb = BitFieldVec::new(register_size, number_of_registers);
         let mut lsb = BitFieldVec::new(register_size, number_of_registers);
@@ -428,7 +429,7 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
             build_hasher: self.build_hasher,
             msb_mask: msb.as_slice().into(),
             lsb_mask: lsb.as_slice().into(),
-            words_per_counter: counter_size_in_words,
+            words_per_estimator: est_size_in_words,
             _marker: std::marker::PhantomData,
         })
     }
@@ -438,7 +439,7 @@ impl<T, H, W> std::fmt::Display for HyperLogLog<T, H, W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "HyperLogLog with relative standard deviation: {}% ({} registers/counter, {} bits/register, {} bytes/counter)",
+            "HyperLogLog with relative standard deviation: {}% ({} registers/estimator, {} bits/register, {} bytes/estimator)",
             100.0 * HyperLogLog::rel_std(self.log_2_num_registers),
             self.num_registers,
             self.register_size,

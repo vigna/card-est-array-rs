@@ -10,7 +10,7 @@ use crate::traits::*;
 use sux::traits::Word;
 use sync_cell_slice::{SyncCell, SyncSlice};
 
-/// An array for counters implementing a shared [`Logic`], and whose
+/// An array for estimators implementing a shared [`EstimationLogic`], and whose
 /// backend is a slice.
 ///
 /// Note that we need a specific type for arrays of slice backends as one cannot
@@ -72,7 +72,7 @@ impl<L: SliceEstimationLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync>
 }
 
 impl<L: SliceEstimationLogic<W>, W, S: AsRef<[W]>> SliceEstimatorArray<L, W, S> {
-    /// Returns the number of counters in the array.
+    /// Returns the number of estimators in the array.
     #[inline(always)]
     pub fn len(&self) -> usize {
         let backend = self.backend.as_ref();
@@ -80,7 +80,7 @@ impl<L: SliceEstimationLogic<W>, W, S: AsRef<[W]>> SliceEstimatorArray<L, W, S> 
         backend.len() / self.logic.backend_len()
     }
 
-    /// Returns `true` if the array contains no elements.
+    /// Returns `true` if the array contains no estimators.
     #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.backend.as_ref().is_empty()
@@ -117,7 +117,7 @@ impl<L, W, S: AsMut<[W]>> AsMut<[W]> for SliceEstimatorArray<L, W, S> {
 }
 
 impl<L: SliceEstimationLogic<W>, W: Word> SliceEstimatorArray<L, W, Box<[W]>> {
-    /// Creates a new counter slice with the provided logic allocating in-memory.
+    /// Creates a new estimator slice with the provided logic.
     ///
     /// # Arguments
     /// * `logic`: the estimator logic to use.
@@ -153,7 +153,7 @@ impl<L: SliceEstimationLogic<W> + Clone, W: Word, S: AsRef<[W]>> EstimatorArray<
     }
 
     #[inline(always)]
-    fn get_counter(&self, index: usize) -> Self::Estimator<'_> {
+    fn get_estimator(&self, index: usize) -> Self::Estimator<'_> {
         DefaultEstimator::new(&self.logic, self.get_backend(index))
     }
 
@@ -178,7 +178,7 @@ impl<L: SliceEstimationLogic<W> + Clone, W: Word, S: AsRef<[W]> + AsMut<[W]>> Es
     }
 
     #[inline(always)]
-    fn get_counter_mut(&mut self, index: usize) -> Self::EstimatorMut<'_> {
+    fn get_estimator_mut(&mut self, index: usize) -> Self::EstimatorMut<'_> {
         let logic = &self.logic;
         // We have to extract manually the backend because get_backend_mut
         // borrows self mutably, but we need to borrow just self.backend.

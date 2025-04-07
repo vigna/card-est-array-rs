@@ -9,13 +9,13 @@ use super::estimator::{EstimationLogic, Estimator, EstimatorMut};
 
 /// An array of immutable estimators sharing a [`EstimationLogic`].
 ///
-/// Arrays of counters are useful because they share the same logic, saving
-/// space with respect to a slice of counters. Moreover, by hiding the
-/// implementation, it is possible to create counter arrays for counters whose
-/// [backends are slices](crate::impls::SliceEstimatorArray).
+/// Arrays of estimators are useful because they share the same logic, saving
+/// space with respect to a estimators. Moreover, by hiding the
+/// implementation, it is possible to create estimator arrays for estimators
+/// whose [backends are slices](crate::impls::SliceEstimatorArray).
 pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
     /// The type of immutable estimator returned by
-    /// [`get_counter`](EstimatorArray::get_counter).
+    /// [`get_estimator`](EstimatorArray::get_estimator).
     type Estimator<'a>: Estimator<L>
     where
         Self: 'a;
@@ -27,7 +27,7 @@ pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
     ///
     /// Note that this method will usually require some allocation, as it needs
     /// to create a new instance of [`EstimatorArray::Estimator`].
-    fn get_counter(&self, index: usize) -> Self::Estimator<'_>;
+    fn get_estimator(&self, index: usize) -> Self::Estimator<'_>;
 
     /// Returns an immutable reference to the backend of the estimator at the
     /// specified index.
@@ -35,10 +35,10 @@ pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
     /// This method will usually require no allocation.
     fn get_backend(&self, index: usize) -> &L::Backend;
 
-    /// Returns the number of counters in the array.
+    /// Returns the number of estimators in the array.
     fn len(&self) -> usize;
 
-    /// Returns `true` if the array contains no counters.
+    /// Returns `true` if the array contains no estimators.
     #[inline(always)]
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -48,7 +48,7 @@ pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
 /// An array of mutable estimators sharing a [`EstimationLogic`].
 pub trait EstimatorArrayMut<L: EstimationLogic + ?Sized>: EstimatorArray<L> {
     /// The type of mutable estimator returned by
-    /// [`get_counter_mut`](EstimatorArrayMut::get_counter_mut).
+    /// [`get_estimator_mut`](EstimatorArrayMut::get_estimator_mut).
     type EstimatorMut<'a>: EstimatorMut<L>
     where
         Self: 'a;
@@ -57,7 +57,7 @@ pub trait EstimatorArrayMut<L: EstimationLogic + ?Sized>: EstimatorArray<L> {
     ///
     /// Note that this method will usually require some allocation, as it needs
     /// to create a new instance of [`EstimatorArrayMut::EstimatorMut`].
-    fn get_counter_mut(&mut self, index: usize) -> Self::EstimatorMut<'_>;
+    fn get_estimator_mut(&mut self, index: usize) -> Self::EstimatorMut<'_>;
 
     /// Returns a mutable reference to the backend of the estimator at the
     /// specified index.
@@ -65,11 +65,11 @@ pub trait EstimatorArrayMut<L: EstimationLogic + ?Sized>: EstimatorArray<L> {
     /// This method will usually require no allocation.
     fn get_backend_mut(&mut self, index: usize) -> &mut L::Backend;
 
-    /// Resets all counters in the array.
+    /// Resets all estimators in the array.
     fn clear(&mut self);
 }
 
-/// A trait for counter arrays that can be viewed as a [`SyncEstimatorArray`].
+/// A trait for estimator arrays that can be viewed as a [`SyncEstimatorArray`].
 pub trait AsSyncArray<L: EstimationLogic + ?Sized> {
     type SyncEstimatorArray<'a>: SyncEstimatorArray<L>
     where
@@ -93,7 +93,7 @@ pub trait AsSyncArray<L: EstimationLogic + ?Sized> {
 /// # Safety
 ///
 /// The methods of this trait are unsafe because multiple thread can
-/// concurrently access the same counter array. The caller must ensure that
+/// concurrently access the same estimator array. The caller must ensure that
 /// there are no data races.
 pub trait SyncEstimatorArray<L: EstimationLogic + ?Sized>: Sync {
     /// Returns the logic used by the estimators in the array.
@@ -105,7 +105,7 @@ pub trait SyncEstimatorArray<L: EstimationLogic + ?Sized>: Sync {
     /// # Safety
     ///
     /// The caller must ensure that the backend is correct for the logic of the
-    /// counter array, and that there are no data races.
+    /// estimator array, and that there are no data races.
     unsafe fn set(&self, index: usize, content: &L::Backend);
 
     /// Copies the backend of the estimator at `index` to the given backend, using a
@@ -114,20 +114,20 @@ pub trait SyncEstimatorArray<L: EstimationLogic + ?Sized>: Sync {
     /// # Safety
     ///
     /// The caller must ensure that the backend is correct for the logic of the
-    /// counter array, and that there are no data races.
+    /// estimator array, and that there are no data races.
     unsafe fn get(&self, index: usize, content: &mut L::Backend);
 
-    /// Clears all counters in the array.
+    /// Clears all estimators in the array.
     ///
     /// # Safety
     ///
     /// The caller must ensure that there are no data races.
     unsafe fn clear(&self);
 
-    /// Returns the number of counters in the array.
+    /// Returns the number of estimators in the array.
     fn len(&self) -> usize;
 
-    /// Returns `true` if the array contains no counters.
+    /// Returns `true` if the array contains no estimators.
     #[inline(always)]
     fn is_empty(&self) -> bool {
         self.len() == 0

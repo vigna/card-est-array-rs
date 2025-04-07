@@ -47,7 +47,9 @@ node neighborhood functions (the functions telling, for each node, how many
 other nodes are within distance *t*). The [HyperBall
 algorithm](https://doi.ieeecomputersociety.org/10.1109/ICDMW.2013.10),
 distributed with the [WebGraph framework](https://webgraph.di.unimi.it/), is a
-highly engineered implementation of these ideas.
+highly engineered implementation of these ideas. It has been used, for example,
+to compute the [degrees of separation of
+Facebook](https://doi.org/10.1145/2380718.2380723).
 
 The purpose of this crate is to lay the foundation of the infrastructure that is
 necessary to implement HyperBall in the [Rust port of the WebGraph
@@ -74,4 +76,4 @@ reflect those of the European Union or the Italian MUR. Neither the European
 Union nor the Italian MUR can be held responsible for them.
 
 [mergeable]:
-    <https://docs.rs/webgraph-algo/latest/webgraph-algo/traits/counter/trait.MergeLogic.html>
+    <https://docs.rs/webgraph-algo/latest/webgraph-algo/traits/estimator/trait.MergeEstimationLogic.html>

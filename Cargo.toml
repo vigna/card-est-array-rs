@@ -2,6 +2,16 @@
 name = "card-est-array"
 version = "0.1.0"
 edition = "2021"
+description = "Infrastructure for managing large arrays of cardinality estimators."
+repository = "https://github.com/vigna/card-est-array-rs/"
+license = "Apache-2.0 OR LGPL-2.1-or-later"
+readme = "README.md"
+keywords = ["cardinality", "estimator"]
+categories = ["data-structures", "algorithms"]
+authors = [
+	"Matteo Dell'Acqua <dellacqua.matteo99@gmail.com>",
+	"Sebastiano Vigna <sebastiano.vigna@unimi.it>",
+]
 
 [dependencies]
 anyhow = "1.0.97"

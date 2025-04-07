@@ -24,7 +24,7 @@ use std::borrow::Borrow;
 ///   [`new_estimator`](EstimationLogic::new_estimator).
 /// * A method to add elements to an estimator, given its backend:
 ///   [`add`](EstimationLogic::add).
-/// * Methods to manipulate backends: [`count`](EstimationLogic::count),
+/// * Methods to manipulate backends: [`estimate`](EstimationLogic::estimate),
 ///   [`clear`](EstimationLogic::clear), and [`set`](EstimationLogic::set).
 ///
 /// By providing methods based on backends, an [`EstimationLogic`] can be used
@@ -36,7 +36,7 @@ use std::borrow::Borrow;
 ///
 /// If you plan to use a small number of non-related estimators, we suggest you
 /// [create](EstimationLogic::new_estimator) them and use their methods. More
-/// complex applications, coordinating large numbers of counters, will find
+/// complex applications, coordinating large numbers of estimators, will find
 /// backed-based methods useful.
 pub trait EstimationLogic {
     /// The type of items.
@@ -98,7 +98,7 @@ pub trait MergeEstimationLogic: EstimationLogic {
     );
 }
 
-/// Trait implemented by [counter logics](EstimationLogic) whose backend is a
+/// Trait implemented by [estimation logics](EstimationLogic) whose backend is a
 /// slice of elements of some type.
 pub trait SliceEstimationLogic<T>: EstimationLogic<Backend = [T]> {
     /// The number of elements of type `T` in a backend.
@@ -151,7 +151,7 @@ pub trait MergeEstimator<L: MergeEstimationLogic + ?Sized>: EstimatorMut<L> {
     ///
     /// If you need to merge with the content of another estimator, just use
     /// [`as_ref`](AsRef) on the estimator. This approach
-    /// makes it possible to merge both owned and non-owned counters.
+    /// makes it possible to merge both owned and non-owned estimators.
     fn merge(&mut self, backend: &L::Backend) {
         let mut helper = self.logic().new_helper();
         self.merge_with_helper(backend, &mut helper);
@@ -162,6 +162,6 @@ pub trait MergeEstimator<L: MergeEstimationLogic + ?Sized>: EstimatorMut<L> {
     ///
     /// If you need to merge with the content of another estimator, just use
     /// [`as_ref`](AsRef) on the estimator. This approach makes it
-    /// possible to merge both owned and non-owned counters.
+    /// possible to merge both owned and non-owned estimators.
     fn merge_with_helper(&mut self, backend: &L::Backend, helper: &mut L::Helper);
 }
