@@ -4,7 +4,7 @@ use card_est_array::{
 };
 
 const N: usize = 1_000_000;
-const ITERS: usize = 50_000_000;
+const ITERS: usize = 100_000_000;
 
 fn main() {
     let logic = HyperLogLogBuilder::new(N)
