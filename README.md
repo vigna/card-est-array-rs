@@ -1,13 +1,13 @@
-# Counter Array
+# Arrays of Cardinality Estimators
 
-[![downloads](https://img.shields.io/crates/d/counter-array)](https://crates.io/crates/counter-array)
-[![dependents](https://img.shields.io/librariesio/dependents/cargo/counter-array)](https://crates.io/crates/counter-array/reverse_dependencies)
-![GitHub CI](https://github.com/vigna/counter-array-rs/actions/workflows/rust.yml/badge.svg)
-![license](https://img.shields.io/crates/l/counter-array)
-[![Line Count](https://tokei.rs/b1/github/vigna/counter-array-rs?type=Rust,Python)](https://github.com/vigna/counter-array-rs)
-[![Latest Version](https://img.shields.io/crates/v/counter-array.svg)](https://crates.io/crates/counter-array)
-[![Documentation](https://docs.rs/counter-array/badge.svg)](https://docs.rs/counter-array)
-[![Coverage Status](https://coveralls.io/repos/github/vigna/counter-array-rs/badge.svg?branch=main)](https://coveralls.io/github/vigna/counter-array-rs?branch=main)  
+[![downloads](https://img.shields.io/crates/d/card-est-array)](https://crates.io/crates/card-est-array)
+[![dependents](https://img.shields.io/librariesio/dependents/cargo/card-est-array)](https://crates.io/crates/card-est-array/reverse_dependencies)
+![GitHub CI](https://github.com/vigna/card-est-array-rs/actions/workflows/rust.yml/badge.svg)
+![license](https://img.shields.io/crates/l/card-est-array)
+[![Line Count](https://tokei.rs/b1/github/vigna/card-est-array-rs?type=Rust,Python)](https://github.com/vigna/card-est-array-rs)
+[![Latest Version](https://img.shields.io/crates/v/card-est-array.svg)](https://crates.io/crates/card-est-array)
+[![Documentation](https://docs.rs/card-est-array/badge.svg)](https://docs.rs/card-est-array)
+[![Coverage Status](https://coveralls.io/repos/github/vigna/card-est-array-rs/badge.svg?branch=main)](https://coveralls.io/github/vigna/card-est-array-rs?branch=main)  
 
 Infrastructure for managing large arrays of probabilistic counters.
 
