@@ -19,7 +19,7 @@ use std::borrow::Borrow;
 ///     - `Item`: the type of items the estimator accepts.
 ///     - `Backend`: the type of the estimator backend, that is, the raw,
 ///       concrete representation of the estimator state.
-///     - `estimator<'a>`: the type of a estimator of this kind.
+///     - `Estimator<'a>`: the type of a estimator of this kind.
 /// * A method to create a new estimator:
 ///   [`new_estimator`](EstimationLogic::new_estimator).
 /// * A method to add elements to an estimator, given its backend:

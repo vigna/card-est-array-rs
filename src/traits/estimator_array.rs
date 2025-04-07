@@ -9,10 +9,10 @@ use super::estimator::{EstimationLogic, Estimator, EstimatorMut};
 
 /// An array of immutable estimators sharing a [`EstimationLogic`].
 ///
-/// Arrays of estimators are useful because they share the same logic, saving
-/// space with respect to a estimators. Moreover, by hiding the
-/// implementation, it is possible to create estimator arrays for estimators
-/// whose [backends are slices](crate::impls::SliceEstimatorArray).
+/// Arrays of estimators are useful because they share the same logic, thus
+/// saving space. Moreover, by hiding the implementation, it is possible to
+/// create estimator arrays for estimators whose [backends are
+/// slices](crate::impls::SliceEstimatorArray).
 pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
     /// The type of immutable estimator returned by
     /// [`get_estimator`](EstimatorArray::get_estimator).

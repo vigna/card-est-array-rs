@@ -5,8 +5,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
-//! Traits for estimators and arrays of estimators.
-
 mod hyper_log_log;
 pub use hyper_log_log::*;
 

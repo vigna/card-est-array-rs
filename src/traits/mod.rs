@@ -5,8 +5,6 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
-//! Traits for estimators and arrays of estimators.
-
 mod estimator;
 pub use estimator::*;
 mod estimator_array;
