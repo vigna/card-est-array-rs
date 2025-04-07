@@ -1,5 +1,5 @@
 [package]
-name = "counter-array"
+name = "card-est-array"
 version = "0.1.0"
 edition = "2021"
 
