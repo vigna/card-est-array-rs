@@ -1,4 +1,7 @@
-use card_est_array::{impls::{HyperLogLogBuilder, SliceEstimatorArray}, traits::{Estimator, EstimatorArrayMut, EstimatorMut}};
+use card_est_array::{
+    impls::{HyperLogLogBuilder, SliceEstimatorArray},
+    traits::{Estimator, EstimatorArrayMut, EstimatorMut},
+};
 
 const N: usize = 1_000_000;
 const ITERS: usize = 50_000_000;
@@ -6,7 +9,8 @@ const ITERS: usize = 50_000_000;
 fn main() {
     let logic = HyperLogLogBuilder::new(N)
         .log_2_num_reg(6)
-        .build::<usize>().unwrap();
+        .build::<usize>()
+        .unwrap();
 
     let mut array = SliceEstimatorArray::new(logic.clone(), 1);
     for i in 0..N {
