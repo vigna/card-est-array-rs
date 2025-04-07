@@ -8,15 +8,15 @@
 use crate::traits::*;
 use std::borrow::Borrow;
 
-/// A default counter for generic [`Logic`] and backends.
-pub struct DefaultEstimator<L: Logic, BL: Borrow<L>, B> {
+/// A default estimator for generic [`EstimationLogic`] and backends.
+pub struct DefaultEstimator<L: EstimationLogic, BL: Borrow<L>, B> {
     logic: BL,
     backend: B,
     _marker: std::marker::PhantomData<L>,
 }
 
-impl<L: Logic, BL: Borrow<L>, B> DefaultEstimator<L, BL, B> {
-    /// Creates a new default counter for the specified logic and backend.
+impl<L: EstimationLogic, BL: Borrow<L>, B> DefaultEstimator<L, BL, B> {
+    /// Creates a new default estimator for the specified logic and backend.
     ///
     /// # Arguments
     /// * `logic`: the estimator logic.
@@ -30,7 +30,7 @@ impl<L: Logic, BL: Borrow<L>, B> DefaultEstimator<L, BL, B> {
     }
 }
 
-impl<L: Logic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> AsRef<L::Backend>
+impl<L: EstimationLogic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> AsRef<L::Backend>
     for DefaultEstimator<L, BL, B>
 {
     fn as_ref(&self) -> &L::Backend {
@@ -38,7 +38,7 @@ impl<L: Logic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> AsRef<L::Backend>
     }
 }
 
-impl<L: Logic + Clone, BL: Borrow<L>, B: AsMut<L::Backend>> AsMut<L::Backend>
+impl<L: EstimationLogic + Clone, BL: Borrow<L>, B: AsMut<L::Backend>> AsMut<L::Backend>
     for DefaultEstimator<L, BL, B>
 {
     fn as_mut(&mut self) -> &mut L::Backend {
@@ -46,7 +46,7 @@ impl<L: Logic + Clone, BL: Borrow<L>, B: AsMut<L::Backend>> AsMut<L::Backend>
     }
 }
 
-impl<L: Logic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> Estimator<L>
+impl<L: EstimationLogic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> Estimator<L>
     for DefaultEstimator<L, BL, B>
 {
     type OwnedEstimator = DefaultEstimator<L, L, Box<L::Backend>>;
@@ -57,7 +57,7 @@ impl<L: Logic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> Estimator<L>
 
     #[inline(always)]
     fn estimate(&self) -> f64 {
-        self.logic.borrow().count(self.backend.as_ref())
+        self.logic.borrow().estimate(self.backend.as_ref())
     }
     #[inline(always)]
     fn into_owned(self) -> Self::OwnedEstimator {
@@ -65,8 +65,8 @@ impl<L: Logic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> Estimator<L>
     }
 }
 
-impl<L: Logic + Clone, BL: Borrow<L>, B: AsRef<L::Backend> + AsMut<L::Backend>> EstimatorMut<L>
-    for DefaultEstimator<L, BL, B>
+impl<L: EstimationLogic + Clone, BL: Borrow<L>, B: AsRef<L::Backend> + AsMut<L::Backend>>
+    EstimatorMut<L> for DefaultEstimator<L, BL, B>
 {
     #[inline(always)]
     fn add(&mut self, element: impl Borrow<L::Item>) {
@@ -84,8 +84,11 @@ impl<L: Logic + Clone, BL: Borrow<L>, B: AsRef<L::Backend> + AsMut<L::Backend>> 
     }
 }
 
-impl<L: Logic + MergeLogic + Clone, BL: Borrow<L>, B: AsRef<L::Backend> + AsMut<L::Backend>>
-    MergeEstimator<L> for DefaultEstimator<L, BL, B>
+impl<
+        L: EstimationLogic + MergeEstimationLogic + Clone,
+        BL: Borrow<L>,
+        B: AsRef<L::Backend> + AsMut<L::Backend>,
+    > MergeEstimator<L> for DefaultEstimator<L, BL, B>
 {
     #[inline(always)]
     fn merge(&mut self, other: &L::Backend) {
@@ -93,7 +96,11 @@ impl<L: Logic + MergeLogic + Clone, BL: Borrow<L>, B: AsRef<L::Backend> + AsMut<
     }
 
     #[inline(always)]
-    fn merge_with_helper(&mut self, other: &L::Backend, helper: &mut <L as MergeLogic>::Helper) {
+    fn merge_with_helper(
+        &mut self,
+        other: &L::Backend,
+        helper: &mut <L as MergeEstimationLogic>::Helper,
+    ) {
         self.logic
             .borrow()
             .merge_with_helper(self.backend.as_mut(), other, helper)

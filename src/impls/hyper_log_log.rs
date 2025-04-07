@@ -14,7 +14,7 @@ use sux::{
     traits::{BitFieldSliceMut, Word},
 };
 
-use crate::traits::{Logic, MergeLogic, SliceLogic};
+use crate::traits::{EstimationLogic, MergeEstimationLogic, SliceEstimationLogic};
 
 use super::DefaultEstimator;
 
@@ -124,7 +124,7 @@ impl<
         T: Hash,
         H: BuildHasher + Clone,
         W: Word + UpcastableInto<HashResult> + CastableFrom<HashResult>,
-    > SliceLogic<W> for HyperLogLog<T, H, W>
+    > SliceEstimationLogic<W> for HyperLogLog<T, H, W>
 {
     fn backend_len(&self) -> usize {
         self.words_per_counter
@@ -135,7 +135,7 @@ impl<
         T: Hash,
         H: BuildHasher + Clone,
         W: Word + UpcastableInto<HashResult> + CastableFrom<HashResult>,
-    > Logic for HyperLogLog<T, H, W>
+    > EstimationLogic for HyperLogLog<T, H, W>
 {
     type Item = T;
     type Backend = [W];
@@ -171,7 +171,7 @@ impl<
         }
     }
 
-    fn count(&self, backend: &[W]) -> f64 {
+    fn estimate(&self, backend: &[W]) -> f64 {
         let mut harmonic_mean = 0.0;
         let mut zeroes = 0;
 
@@ -210,7 +210,7 @@ impl<
         T: Hash,
         H: BuildHasher + Clone,
         W: Word + UpcastableInto<HashResult> + CastableFrom<HashResult>,
-    > MergeLogic for HyperLogLog<T, H, W>
+    > MergeEstimationLogic for HyperLogLog<T, H, W>
 {
     type Helper = HyperLogLogHelper<W>;
 

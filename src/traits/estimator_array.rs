@@ -5,15 +5,15 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
-use super::card_est::{Estimator, EstimatorMut, Logic};
+use super::estimator::{EstimationLogic, Estimator, EstimatorMut};
 
-/// An array of immutable estimators sharing a [`Logic`].
+/// An array of immutable estimators sharing a [`EstimationLogic`].
 ///
 /// Arrays of counters are useful because they share the same logic, saving
 /// space with respect to a slice of counters. Moreover, by hiding the
 /// implementation, it is possible to create counter arrays for counters whose
 /// [backends are slices](crate::impls::SliceEstimatorArray).
-pub trait EstimatorArray<L: Logic + ?Sized> {
+pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
     /// The type of immutable estimator returned by
     /// [`get_counter`](EstimatorArray::get_counter).
     type Estimator<'a>: Estimator<L>
@@ -45,8 +45,8 @@ pub trait EstimatorArray<L: Logic + ?Sized> {
     }
 }
 
-/// An array of mutable estimators sharing a [`Logic`].
-pub trait EstimatorArrayMut<L: Logic + ?Sized>: EstimatorArray<L> {
+/// An array of mutable estimators sharing a [`EstimationLogic`].
+pub trait EstimatorArrayMut<L: EstimationLogic + ?Sized>: EstimatorArray<L> {
     /// The type of mutable estimator returned by
     /// [`get_counter_mut`](EstimatorArrayMut::get_counter_mut).
     type EstimatorMut<'a>: EstimatorMut<L>
@@ -70,7 +70,7 @@ pub trait EstimatorArrayMut<L: Logic + ?Sized>: EstimatorArray<L> {
 }
 
 /// A trait for counter arrays that can be viewed as a [`SyncEstimatorArray`].
-pub trait AsSyncArray<L: Logic + ?Sized> {
+pub trait AsSyncArray<L: EstimationLogic + ?Sized> {
     type SyncEstimatorArray<'a>: SyncEstimatorArray<L>
     where
         Self: 'a;
@@ -80,7 +80,7 @@ pub trait AsSyncArray<L: Logic + ?Sized> {
     fn as_sync_array(&mut self) -> Self::SyncEstimatorArray<'_>;
 }
 
-/// An array of mutable estimators sharing a [`Logic`] that can be shared
+/// An array of mutable estimators sharing a [`EstimationLogic`] that can be shared
 /// between threads.
 ///
 /// This trait has the same purpose of [`EstimatorArrayMut`], but can be shared
@@ -95,7 +95,7 @@ pub trait AsSyncArray<L: Logic + ?Sized> {
 /// The methods of this trait are unsafe because multiple thread can
 /// concurrently access the same counter array. The caller must ensure that
 /// there are no data races.
-pub trait SyncEstimatorArray<L: Logic + ?Sized>: Sync {
+pub trait SyncEstimatorArray<L: EstimationLogic + ?Sized>: Sync {
     /// Returns the logic used by the estimators in the array.
     fn logic(&self) -> &L;
 

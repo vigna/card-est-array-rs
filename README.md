@@ -21,8 +21,10 @@ estimator remembers the number of distinct elements that have been added to it.
 
 The returned size is only an approximation of the real size, and the precision
 can be tuned, but in exchange cardinality estimators use very little space: for
-example, a [HyperLogLog counter] uses 2ᵇlog log *n* bits to achieve an average
-relative error of 1.04/√2ᵇ (log log *n* ≤ 6 for all practical datasets).
+example, a [HyperLogLog cardinality
+estimator](https://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) uses
+2ᵇlog log *n* bits to achieve an average relative error of 1.04/√2ᵇ (log log *n*
+≤ 6 for all practical datasets).
 
 It is common, for example, to use cardinality estimators to measure the number
 of unique users in click streams. But more interesting applications use the fact

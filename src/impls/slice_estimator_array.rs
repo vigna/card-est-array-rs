@@ -36,8 +36,8 @@ where
 {
 }
 
-impl<L: SliceLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync> SyncEstimatorArray<L>
-    for SyncSliceEstimatorArray<L, W, S>
+impl<L: SliceEstimationLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync>
+    SyncEstimatorArray<L> for SyncSliceEstimatorArray<L, W, S>
 {
     unsafe fn set(&self, index: usize, content: &L::Backend) {
         debug_assert!(content.as_ref().len() == self.logic.backend_len());
@@ -71,7 +71,7 @@ impl<L: SliceLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync> SyncEstim
     }
 }
 
-impl<L: SliceLogic<W>, W, S: AsRef<[W]>> SliceEstimatorArray<L, W, S> {
+impl<L: SliceEstimationLogic<W>, W, S: AsRef<[W]>> SliceEstimatorArray<L, W, S> {
     /// Returns the number of counters in the array.
     #[inline(always)]
     pub fn len(&self) -> usize {
@@ -87,7 +87,7 @@ impl<L: SliceLogic<W>, W, S: AsRef<[W]>> SliceEstimatorArray<L, W, S> {
     }
 }
 
-impl<L: SliceLogic<W> + Clone + Sync, W: Word, S: AsMut<[W]>> AsSyncArray<L>
+impl<L: SliceEstimationLogic<W> + Clone + Sync, W: Word, S: AsMut<[W]>> AsSyncArray<L>
     for SliceEstimatorArray<L, W, S>
 {
     type SyncEstimatorArray<'a>
@@ -116,7 +116,7 @@ impl<L, W, S: AsMut<[W]>> AsMut<[W]> for SliceEstimatorArray<L, W, S> {
     }
 }
 
-impl<L: SliceLogic<W>, W: Word> SliceEstimatorArray<L, W, Box<[W]>> {
+impl<L: SliceEstimationLogic<W>, W: Word> SliceEstimatorArray<L, W, Box<[W]>> {
     /// Creates a new counter slice with the provided logic allocating in-memory.
     ///
     /// # Arguments
@@ -133,7 +133,7 @@ impl<L: SliceLogic<W>, W: Word> SliceEstimatorArray<L, W, Box<[W]>> {
     }
 }
 
-impl<L: SliceLogic<W> + Clone, W: Word, S: AsRef<[W]>> EstimatorArray<L>
+impl<L: SliceEstimationLogic<W> + Clone, W: Word, S: AsRef<[W]>> EstimatorArray<L>
     for SliceEstimatorArray<L, W, S>
 {
     type Estimator<'a>
@@ -163,7 +163,7 @@ impl<L: SliceLogic<W> + Clone, W: Word, S: AsRef<[W]>> EstimatorArray<L>
     }
 }
 
-impl<L: SliceLogic<W> + Clone, W: Word, S: AsRef<[W]> + AsMut<[W]>> EstimatorArrayMut<L>
+impl<L: SliceEstimationLogic<W> + Clone, W: Word, S: AsRef<[W]> + AsMut<[W]>> EstimatorArrayMut<L>
     for SliceEstimatorArray<L, W, S>
 {
     type EstimatorMut<'a>

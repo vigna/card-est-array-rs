@@ -5,13 +5,13 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
-//! Traits for counters and arrays of counters.
+//! Traits for estimators and arrays of estimators.
 
 mod hyper_log_log;
 pub use hyper_log_log::*;
 
-mod slice_counter_array;
-pub use slice_counter_array::*;
+mod slice_estimator_array;
+pub use slice_estimator_array::*;
 
-mod default_counter;
-pub use default_counter::*;
+mod default_estimator;
+pub use default_estimator::*;

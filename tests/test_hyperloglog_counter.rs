@@ -8,7 +8,9 @@
 use anyhow::Result;
 use card_est_array::{
     impls::{HyperLogLog, HyperLogLogBuilder, SliceEstimatorArray},
-    traits::{Estimator, EstimatorArray, EstimatorArrayMut, EstimatorMut, Logic, MergeEstimator},
+    traits::{
+        EstimationLogic, Estimator, EstimatorArray, EstimatorArrayMut, EstimatorMut, MergeEstimator,
+    },
 };
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -44,7 +46,7 @@ fn test_single() -> Result<()> {
 
                 let float_size = size as f64;
 
-                if (float_size - counter.count()).abs() / float_size < 2.0 * rsd {
+                if (float_size - counter.estimate()).abs() / float_size < 2.0 * rsd {
                     correct += 1;
                 }
             }
@@ -92,10 +94,10 @@ fn test_double() -> Result<()> {
 
                 let float_size = size as f64;
 
-                if (float_size - counter_0.count()).abs() / float_size < 2.0 * rsd {
+                if (float_size - counter_0.estimate()).abs() / float_size < 2.0 * rsd {
                     correct_0 += 1;
                 }
-                if (float_size - counter_1.count()).abs() / float_size < 2.0 * rsd {
+                if (float_size - counter_1.estimate()).abs() / float_size < 2.0 * rsd {
                     correct_1 += 1;
                 }
             }
@@ -154,10 +156,11 @@ fn test_merge() -> Result<()> {
 
                 let float_size = size as f64;
 
-                if (float_size * 2.0 - counter_0.count()).abs() / (float_size * 2.0) < 2.0 * rsd {
+                if (float_size * 2.0 - counter_0.estimate()).abs() / (float_size * 2.0) < 2.0 * rsd
+                {
                     correct_0 += 1;
                 }
-                if (float_size - counter_1.count()).abs() / (float_size * 2.0) < 2.0 * rsd {
+                if (float_size - counter_1.estimate()).abs() / (float_size * 2.0) < 2.0 * rsd {
                     correct_1 += 1;
                 }
             }
@@ -217,12 +220,13 @@ fn test_merge_array() -> Result<()> {
 
                 let float_size = size as f64;
 
-                if (float_size * 2.0 - counters.get_counter(0).count()).abs() / (float_size * 2.0)
+                if (float_size * 2.0 - counters.get_counter(0).estimate()).abs()
+                    / (float_size * 2.0)
                     < 2.0 * rsd
                 {
                     correct_0 += 1;
                 }
-                if (float_size - counters.get_counter(1).count()).abs() / (float_size * 2.0)
+                if (float_size - counters.get_counter(1).estimate()).abs() / (float_size * 2.0)
                     < 2.0 * rsd
                 {
                     correct_1 += 1;
