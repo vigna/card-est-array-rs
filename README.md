@@ -23,7 +23,7 @@ added to it.
 The returned size is only an approximation of the real size, and the precision
 can be tuned, but in exchange probabilistic counter use very little space: for
 example, a [HyperLogLog counter] uses 2ᵇlog log *n* bits to achieve an average
-relative error of 1.04/√2ᵇ (log log *n* ≤ 6 for all practical dataset).
+relative error of 1.04/√2ᵇ (log log *n* ≤ 6 for all practical datasets).
 
 It is common, for example, to use probabilistic counters to measure the number
 of unique users in click streams. But more interesting applications use the fact
@@ -34,23 +34,28 @@ two original counters.
 
 This idea is at the core of ANF, an algorithm for the computation of the
 neighborhood function (the function telling how many pairs of nodes are within
-distance *t*) that used [Martin–Flajolet logarithmic probabilistic counter]. The
-technique was then extended to [log-logarithmic probabilistic counters], with a
-significant reduction of the memory footprint, using [broadword programming] to
-merge such counters; it became also evident that it could be used to compute
-many other interesting properties, such as the distance distribution and all
-centralities based on the node neighborhood functions (the functions telling,
-for each node, how many other nodes are within distance *t*). The [HyperBall
-algorithm], distributed with the [WebGraph framework], is a highly engineered
-implementation of these ideas.
+distance *t*) that used [Flajolet–Martin logarithmic probabilistic
+counters](https://doi.org/10.1016%2F0022-0000%2885%2990041-8). The technique was
+then extended to [log-logarithmic probabilistic
+counters](https://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf), with a
+significant reduction of the memory footprint, using [broadword
+programming](https://doi.org/10.1145/1963405.1963493) to merge such counters; it
+became also evident that it could be used to compute many other interesting
+properties, such as the distance distribution and all centralities based on the
+node neighborhood functions (the functions telling, for each node, how many
+other nodes are within distance *t*). The [HyperBall
+algorithm](https://doi.ieeecomputersociety.org/10.1109/ICDMW.2013.10),
+distributed with the [WebGraph framework](https://webgraph.di.unimi.it/), is a highly engineered implementation
+of these ideas.
 
 The purpose of this crate is to lay the foundation of the infrastructure that is
-necessary to implement HyperBall in the [Rust port of the WebGraph framework].
-We provide implementation of counters and structures handling large arrays of
-counters sharing the same parameters and logic with minimal memory overhead.
-Sharing parameters is essential for scaling to billions of counters, and this is
-why a separate structure for arrays of counter is necessary—just putting a
-billion counters in a vector would waste a large amount of space.
+necessary to implement HyperBall in the [Rust port of the WebGraph
+framework](http://crates.io/crates/webgraph). We provide implementation of
+counters and structures handling large arrays of counters sharing the same
+parameters and logic with minimal memory overhead. Sharing parameters is
+essential for scaling to billions of counters, and this is why a separate
+structure for arrays of counter is necessary—just putting a billion counters in
+a vector would waste a large amount of space.
 
 For this reason, sometimes the traits give a low-level feeling. While single
 counters are encapsulated in suitable structures, arrays of counters are made of
