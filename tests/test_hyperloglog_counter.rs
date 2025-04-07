@@ -6,9 +6,9 @@
  */
 
 use anyhow::Result;
-use counter_array::{
-    impls::{HyperLogLog, HyperLogLogBuilder, SliceCounterArray},
-    traits::{Counter, CounterArray, CounterArrayMut, CounterLogic, CounterMut, MergeCounter},
+use card_est_array::{
+    impls::{HyperLogLog, HyperLogLogBuilder, SliceEstimatorArray},
+    traits::{Estimator, EstimatorArray, EstimatorArrayMut, EstimatorMut, Logic, MergeEstimator},
 };
 use xxhash_rust::xxh3::Xxh3Builder;
 
@@ -34,7 +34,7 @@ fn test_single() -> Result<()> {
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .build()?;
-                let mut counter = logic.new_counter();
+                let mut counter = logic.new_estimator();
                 let incr = (1 << 32) / size as i64;
                 let mut x = i64::MIN;
                 for _ in 0..size {
@@ -80,8 +80,8 @@ fn test_double() -> Result<()> {
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .build()?;
-                let mut counter_0 = logic.new_counter();
-                let mut counter_1 = logic.new_counter();
+                let mut counter_0 = logic.new_estimator();
+                let mut counter_1 = logic.new_estimator();
                 let incr = (1 << 32) / size as i64;
                 let mut x = i64::MIN;
                 for _ in 0..size {
@@ -139,8 +139,8 @@ fn test_merge() -> Result<()> {
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .build()?;
-                let mut counter_0 = logic.new_counter();
-                let mut counter_1 = logic.new_counter();
+                let mut counter_0 = logic.new_estimator();
+                let mut counter_1 = logic.new_estimator();
                 let incr = (1 << 32) / (size * 2) as i64;
                 let mut x = i64::MIN;
                 for _ in 0..size {
@@ -201,7 +201,7 @@ fn test_merge_array() -> Result<()> {
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .build()?;
-                let mut counters = SliceCounterArray::new(logic, 2)?;
+                let mut counters = SliceEstimatorArray::new(logic, 2);
                 let incr = (1 << 32) / (size * 2) as i64;
                 let mut x = i64::MIN;
                 for _ in 0..size {

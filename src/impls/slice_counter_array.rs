@@ -5,30 +5,30 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
-use super::DefaultCounter;
+use super::DefaultEstimator;
 use crate::traits::*;
 use sux::traits::Word;
 use sync_cell_slice::{SyncCell, SyncSlice};
 
-/// An array for counters implementing a shared [`CounterLogic`], and whose
+/// An array for counters implementing a shared [`Logic`], and whose
 /// backend is a slice.
 ///
 /// Note that we need a specific type for arrays of slice backends as one cannot
 /// create a slice of slices.
-pub struct SliceCounterArray<L, W, S> {
+pub struct SliceEstimatorArray<L, W, S> {
     pub(super) logic: L,
     pub(super) backend: S,
     _marker: std::marker::PhantomData<W>,
 }
 
-/// A view of a [`SliceCounterArray`] as a [`SyncCounterArray`].
-pub struct SyncSliceCounterArray<L, W, S> {
+/// A view of a [`SliceEstimatorArray`] as a [`SyncEstimatorArray`].
+pub struct SyncSliceEstimatorArray<L, W, S> {
     pub(super) logic: L,
     pub(super) backend: S,
     _marker: std::marker::PhantomData<W>,
 }
 
-unsafe impl<L, W, S> Sync for SyncSliceCounterArray<L, W, S>
+unsafe impl<L, W, S> Sync for SyncSliceEstimatorArray<L, W, S>
 where
     L: Sync,
     W: Sync,
@@ -36,8 +36,8 @@ where
 {
 }
 
-impl<L: SliceCounterLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync> SyncCounterArray<L>
-    for SyncSliceCounterArray<L, W, S>
+impl<L: SliceLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync> SyncEstimatorArray<L>
+    for SyncSliceEstimatorArray<L, W, S>
 {
     unsafe fn set(&self, index: usize, content: &L::Backend) {
         debug_assert!(content.as_ref().len() == self.logic.backend_len());
@@ -71,7 +71,7 @@ impl<L: SliceCounterLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync> Sy
     }
 }
 
-impl<L: SliceCounterLogic<W>, W, S: AsRef<[W]>> SliceCounterArray<L, W, S> {
+impl<L: SliceLogic<W>, W, S: AsRef<[W]>> SliceEstimatorArray<L, W, S> {
     /// Returns the number of counters in the array.
     #[inline(always)]
     pub fn len(&self) -> usize {
@@ -87,16 +87,16 @@ impl<L: SliceCounterLogic<W>, W, S: AsRef<[W]>> SliceCounterArray<L, W, S> {
     }
 }
 
-impl<L: SliceCounterLogic<W> + Clone + Sync, W: Word, S: AsMut<[W]>> AsSyncArray<L>
-    for SliceCounterArray<L, W, S>
+impl<L: SliceLogic<W> + Clone + Sync, W: Word, S: AsMut<[W]>> AsSyncArray<L>
+    for SliceEstimatorArray<L, W, S>
 {
-    type SyncCounterArray<'a>
-        = SyncSliceCounterArray<L, W, &'a [SyncCell<W>]>
+    type SyncEstimatorArray<'a>
+        = SyncSliceEstimatorArray<L, W, &'a [SyncCell<W>]>
     where
         Self: 'a;
 
-    fn as_sync_array(&mut self) -> SyncSliceCounterArray<L, W, &[SyncCell<W>]> {
-        SyncSliceCounterArray {
+    fn as_sync_array(&mut self) -> SyncSliceEstimatorArray<L, W, &[SyncCell<W>]> {
+        SyncSliceEstimatorArray {
             logic: self.logic.clone(),
             backend: self.backend.as_mut().as_sync_slice(),
             _marker: std::marker::PhantomData,
@@ -104,24 +104,24 @@ impl<L: SliceCounterLogic<W> + Clone + Sync, W: Word, S: AsMut<[W]>> AsSyncArray
     }
 }
 
-impl<L, W, S: AsRef<[W]>> AsRef<[W]> for SliceCounterArray<L, W, S> {
+impl<L, W, S: AsRef<[W]>> AsRef<[W]> for SliceEstimatorArray<L, W, S> {
     fn as_ref(&self) -> &[W] {
         self.backend.as_ref()
     }
 }
 
-impl<L, W, S: AsMut<[W]>> AsMut<[W]> for SliceCounterArray<L, W, S> {
+impl<L, W, S: AsMut<[W]>> AsMut<[W]> for SliceEstimatorArray<L, W, S> {
     fn as_mut(&mut self) -> &mut [W] {
         self.backend.as_mut()
     }
 }
 
-impl<L: SliceCounterLogic<W>, W: Word> SliceCounterArray<L, W, Box<[W]>> {
+impl<L: SliceLogic<W>, W: Word> SliceEstimatorArray<L, W, Box<[W]>> {
     /// Creates a new counter slice with the provided logic allocating in-memory.
     ///
     /// # Arguments
-    /// * `logic`: the counter logic to use.
-    /// * `len`: the number of the counters in the array.
+    /// * `logic`: the estimator logic to use.
+    /// * `len`: the number of the estimators in the array.
     pub fn new(logic: L, len: usize) -> Self {
         let num_backend_len = logic.backend_len();
         let backend = vec![W::ZERO; len * num_backend_len].into();
@@ -133,11 +133,11 @@ impl<L: SliceCounterLogic<W>, W: Word> SliceCounterArray<L, W, Box<[W]>> {
     }
 }
 
-impl<L: SliceCounterLogic<W> + Clone, W: Word, S: AsRef<[W]>> CounterArray<L>
-    for SliceCounterArray<L, W, S>
+impl<L: SliceLogic<W> + Clone, W: Word, S: AsRef<[W]>> EstimatorArray<L>
+    for SliceEstimatorArray<L, W, S>
 {
-    type Counter<'a>
-        = DefaultCounter<L, &'a L, &'a [W]>
+    type Estimator<'a>
+        = DefaultEstimator<L, &'a L, &'a [W]>
     where
         Self: 'a;
 
@@ -153,8 +153,8 @@ impl<L: SliceCounterLogic<W> + Clone, W: Word, S: AsRef<[W]>> CounterArray<L>
     }
 
     #[inline(always)]
-    fn get_counter(&self, index: usize) -> Self::Counter<'_> {
-        DefaultCounter::new(&self.logic, self.get_backend(index))
+    fn get_counter(&self, index: usize) -> Self::Estimator<'_> {
+        DefaultEstimator::new(&self.logic, self.get_backend(index))
     }
 
     #[inline(always)]
@@ -163,11 +163,11 @@ impl<L: SliceCounterLogic<W> + Clone, W: Word, S: AsRef<[W]>> CounterArray<L>
     }
 }
 
-impl<L: SliceCounterLogic<W> + Clone, W: Word, S: AsRef<[W]> + AsMut<[W]>> CounterArrayMut<L>
-    for SliceCounterArray<L, W, S>
+impl<L: SliceLogic<W> + Clone, W: Word, S: AsRef<[W]> + AsMut<[W]>> EstimatorArrayMut<L>
+    for SliceEstimatorArray<L, W, S>
 {
-    type CounterMut<'a>
-        = DefaultCounter<L, &'a L, &'a mut [W]>
+    type EstimatorMut<'a>
+        = DefaultEstimator<L, &'a L, &'a mut [W]>
     where
         Self: 'a;
 
@@ -178,14 +178,14 @@ impl<L: SliceCounterLogic<W> + Clone, W: Word, S: AsRef<[W]> + AsMut<[W]>> Count
     }
 
     #[inline(always)]
-    fn get_counter_mut(&mut self, index: usize) -> Self::CounterMut<'_> {
+    fn get_counter_mut(&mut self, index: usize) -> Self::EstimatorMut<'_> {
         let logic = &self.logic;
         // We have to extract manually the backend because get_backend_mut
         // borrows self mutably, but we need to borrow just self.backend.
         let offset = index * self.logic.backend_len();
         let backend = &mut self.backend.as_mut()[offset..][..self.logic.backend_len()];
 
-        DefaultCounter::new(logic, backend)
+        DefaultEstimator::new(logic, backend)
     }
 
     #[inline(always)]

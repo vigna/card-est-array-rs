@@ -14,14 +14,14 @@ use sux::{
     traits::{BitFieldSliceMut, Word},
 };
 
-use crate::traits::{CounterLogic, MergeCounterLogic, SliceCounterLogic};
+use crate::traits::{Logic, MergeLogic, SliceLogic};
 
-use super::DefaultCounter;
+use super::DefaultEstimator;
 
 /// The type returned by the hash function.
 type HashResult = u64;
 
-/// Counter logic implementing the HyperLogLog algorithm.
+/// Estimator logic implementing the HyperLogLog algorithm.
 ///
 /// Instances are built using [`HyperLogLogBuilder`], which provides convenient
 /// ways to set the internal parameters.
@@ -31,7 +31,7 @@ type HashResult = u64;
 /// type used to store backends.
 ///
 /// An important constraint is that `W` must be able to represent exactly the
-/// backend of a counter. While usually `usize` will work (and it is the default
+/// backend of an estimator. While usually `usize` will work (and it is the default
 /// type chosen by [`new`](HyperLogLogBuilder::new)), with odd register sizes
 /// and small number of registers it might be necessary to select a smaller
 /// type, resulting in slower merges. For example, using 16 5-bit registers one
@@ -124,7 +124,7 @@ impl<
         T: Hash,
         H: BuildHasher + Clone,
         W: Word + UpcastableInto<HashResult> + CastableFrom<HashResult>,
-    > SliceCounterLogic<W> for HyperLogLog<T, H, W>
+    > SliceLogic<W> for HyperLogLog<T, H, W>
 {
     fn backend_len(&self) -> usize {
         self.words_per_counter
@@ -135,19 +135,19 @@ impl<
         T: Hash,
         H: BuildHasher + Clone,
         W: Word + UpcastableInto<HashResult> + CastableFrom<HashResult>,
-    > CounterLogic for HyperLogLog<T, H, W>
+    > Logic for HyperLogLog<T, H, W>
 {
     type Item = T;
     type Backend = [W];
-    type Counter<'a>
-        = DefaultCounter<Self, &'a Self, Box<[W]>>
+    type Estimator<'a>
+        = DefaultEstimator<Self, &'a Self, Box<[W]>>
     where
         T: 'a,
         W: 'a,
         H: 'a;
 
-    fn new_counter(&self) -> Self::Counter<'_> {
-        Self::Counter::new(
+    fn new_estimator(&self) -> Self::Estimator<'_> {
+        Self::Estimator::new(
             self,
             vec![W::ZERO; self.words_per_counter].into_boxed_slice(),
         )
@@ -210,7 +210,7 @@ impl<
         T: Hash,
         H: BuildHasher + Clone,
         W: Word + UpcastableInto<HashResult> + CastableFrom<HashResult>,
-    > MergeCounterLogic for HyperLogLog<T, H, W>
+    > MergeLogic for HyperLogLog<T, H, W>
 {
     type Helper = HyperLogLogHelper<W>;
 
@@ -370,7 +370,7 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
 
     /// Builds the logic.
     ///
-    /// The type of objects the counters keep track of is defined here by `T`,
+    /// The type of objects the estimators keep track of is defined here by `T`,
     /// but it is usually inferred by the compiler.
     ///
     /// # Errors

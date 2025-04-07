@@ -7,7 +7,7 @@
 
 //! Traits for counters and arrays of counters.
 
-mod counter;
-pub use counter::*;
-mod counter_array;
-pub use counter_array::*;
+mod card_est;
+pub use card_est::*;
+mod card_est_array;
+pub use card_est_array::*;
