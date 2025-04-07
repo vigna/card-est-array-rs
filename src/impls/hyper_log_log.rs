@@ -21,6 +21,64 @@ use super::DefaultEstimator;
 /// The type returned by the hash function.
 type HashResult = u64;
 
+/// Compute 2^{-exp} exploiting IEEE754 format.
+/// 
+/// IEEE 754 32-bit float format has the MSB as sign,
+/// then 8 exponent bits, and finally 23 faction (mantissa) bits.
+/// The represented value is (-1)^{sign} (1 + fraction) 2^{exp - 127}.
+/// So by summing 127 to the exponent and shifting it we directly build
+/// the wanted value without any division.
+/// 
+/// But as a downside it works only up to exp = 126 while 
+/// floats allow to store up to exp = 126 + 23 but that requires
+/// setting exponent to 0 and storing the value in the mantissa.
+#[inline(always)]
+#[allow(dead_code)]
+pub(crate) unsafe fn negative_power_of_two_f32(exp: u32) -> f32 {
+    debug_assert!(exp < 127); 
+    let v = (127 - exp) << 23;
+    let res = f32::from_ne_bytes(v.to_ne_bytes());
+    debug_assert_eq!(res, 2.0_f32.powi(-(exp as i32)), "for exponent: {} value: {:032b}", exp, v);
+    res
+}
+
+#[inline(always)]
+/// Like [`negative_power_of_two_f32`] but for f64.
+/// f64 has also 1 bit sign, 11 bits for exponent and 52 bits for mantissa.
+/// So it works up to exp=1023.
+pub(crate) unsafe fn negative_power_of_two_f64(exp: u64) -> f64 {
+    debug_assert!(exp < 1023);
+    let v = (1023 - exp) << 52;
+    let res = f64::from_ne_bytes(v.to_ne_bytes());
+    debug_assert_eq!(res, 2.0_f64.powi(-(exp as i32)), "for exponent: {} value: {:064b}", exp, v);
+    res
+}
+
+#[cfg(test)]
+mod test_negative_power_of_two {
+    use super::*;
+
+    #[test]
+    fn test_f32() {
+        for exp in 0..127 {
+            assert_eq!(
+                unsafe{negative_power_of_two_f32(exp)},
+                2.0_f32.powi(-(exp as i32)),
+            )
+        }
+    }
+
+    #[test]
+    fn test_f64() {
+        for exp in 0..1023 {
+            assert_eq!(
+                unsafe{negative_power_of_two_f64(exp)},
+                2.0_f64.powi(-(exp as i32)),
+            )
+        }
+    }
+}
+
 /// Estimator logic implementing the HyperLogLog algorithm.
 ///
 /// Instances are built using [`HyperLogLogBuilder`], which provides convenient
@@ -180,7 +238,7 @@ impl<
             if value == 0 {
                 zeroes += 1;
             }
-            harmonic_mean += 1.0 / (1 << value) as f64;
+            harmonic_mean += unsafe{negative_power_of_two_f64(value)};
         }
 
         let mut estimate = self.alpha_m_m / harmonic_mean;
