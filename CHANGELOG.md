@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+### New
+
+- New function `HyperLogLogBuilder::min_log_2_num_reg`.
+
 ## [0.3.1] - 2026-03-07
 
 ### Changed
