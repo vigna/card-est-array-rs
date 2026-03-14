@@ -10,14 +10,8 @@ use std::hash::*;
 use std::num::NonZeroUsize;
 use std::{borrow::Borrow, f64::consts::LN_2};
 
+use crate::PlatformWord;
 use crate::traits::Word;
-
-#[cfg(target_pointer_width = "16")]
-type DefaultWord = u16;
-#[cfg(target_pointer_width = "32")]
-type DefaultWord = u32;
-#[cfg(target_pointer_width = "64")]
-type DefaultWord = u64;
 
 use crate::traits::{EstimationLogic, MergeEstimationLogic, SliceEstimationLogic};
 
@@ -48,7 +42,7 @@ type HashResult = u64;
 /// [`HyperLogLogBuilder::min_log_2_num_reg`] returns the minimum value for
 /// `log_2_num_registers` that satisfies this property.
 #[derive(Debug, PartialEq)]
-pub struct HyperLogLog<T, H, W> {
+pub struct HyperLogLog<T, H, W = PlatformWord> {
     build_hasher: H,
     register_size: usize,
     num_registers_minus_1: HashResult,
@@ -249,7 +243,7 @@ where
 
 /// Builds a [`HyperLogLog`] cardinality-estimator logic.
 #[derive(Debug, Clone)]
-pub struct HyperLogLogBuilder<H, W = DefaultWord> {
+pub struct HyperLogLogBuilder<H, W = PlatformWord> {
     build_hasher: H,
     log_2_num_registers: usize,
     num_elements: usize,

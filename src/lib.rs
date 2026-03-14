@@ -7,5 +7,12 @@
 
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 
+#[cfg(target_pointer_width = "16")]
+type PlatformWord = u16;
+#[cfg(target_pointer_width = "32")]
+type PlatformWord = u32;
+#[cfg(target_pointer_width = "64")]
+type PlatformWord = u64;
+
 pub mod impls;
 pub mod traits;

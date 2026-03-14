@@ -6,6 +6,7 @@
  */
 
 use super::DefaultEstimator;
+use crate::PlatformWord;
 use crate::traits::Word;
 use crate::traits::*;
 use sync_cell_slice::{SyncCell, SyncSlice};
@@ -15,14 +16,14 @@ use sync_cell_slice::{SyncCell, SyncSlice};
 ///
 /// Note that we need a specific type for arrays of slice backends as one cannot
 /// create a slice of slices.
-pub struct SliceEstimatorArray<L, W, S> {
+pub struct SliceEstimatorArray<L, W = PlatformWord, S = Box<[W]>> {
     pub(super) logic: L,
     pub(super) backend: S,
     _marker: std::marker::PhantomData<W>,
 }
 
 /// A view of a [`SliceEstimatorArray`] as a [`SyncEstimatorArray`].
-pub struct SyncSliceEstimatorArray<L, W, S> {
+pub struct SyncSliceEstimatorArray<L, W = PlatformWord, S = Box<[W]>> {
     pub(super) logic: L,
     pub(super) backend: S,
     _marker: std::marker::PhantomData<W>,
