@@ -1,10 +1,14 @@
 # Change Log
 
-## Unreleased
+## [0.4.0] - 2026-03-15
 
 ### New
 
 - New function `HyperLogLogBuilder::min_log_2_num_reg`.
+
+### Changed
+
+- Removed dependency from `num-traits`.
 
 ## [0.3.1] - 2026-03-07
 

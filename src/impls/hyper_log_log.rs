@@ -5,12 +5,11 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
-use num_traits::AsPrimitive;
+use num_primitive::{PrimitiveNumber, PrimitiveNumberAs};
 use std::hash::*;
 use std::num::NonZeroUsize;
 use std::{borrow::Borrow, f64::consts::LN_2};
 
-use crate::PlatformWord;
 use crate::traits::Word;
 
 use crate::traits::{EstimationLogic, MergeEstimationLogic, SliceEstimationLogic};
@@ -42,7 +41,7 @@ type HashResult = u64;
 /// [`HyperLogLogBuilder::min_log_2_num_reg`] returns the minimum value for
 /// `log_2_num_registers` that satisfies this property.
 #[derive(Debug, PartialEq)]
-pub struct HyperLogLog<T, H, W = PlatformWord> {
+pub struct HyperLogLog<T, H, W = usize> {
     build_hasher: H,
     register_size: usize,
     num_registers_minus_1: HashResult,
@@ -127,10 +126,9 @@ impl<T, H: Clone, W: Word> HyperLogLog<T, H, W> {
     }
 }
 
-impl<T: Hash, H: BuildHasher + Clone, W: Word + Into<u64>> SliceEstimationLogic<W>
-    for HyperLogLog<T, H, W>
+impl<T: Hash, H: BuildHasher + Clone, W: Word> SliceEstimationLogic<W> for HyperLogLog<T, H, W>
 where
-    u64: AsPrimitive<W>,
+    u32: PrimitiveNumberAs<W>,
 {
     #[inline(always)]
     fn backend_len(&self) -> usize {
@@ -138,9 +136,9 @@ where
     }
 }
 
-impl<T: Hash, H: BuildHasher + Clone, W: Word + Into<u64>> EstimationLogic for HyperLogLog<T, H, W>
+impl<T: Hash, H: BuildHasher + Clone, W: Word> EstimationLogic for HyperLogLog<T, H, W>
 where
-    u64: AsPrimitive<W>,
+    u32: PrimitiveNumberAs<W>,
 {
     type Item = T;
     type Backend = [W];
@@ -161,16 +159,19 @@ where
     fn add(&self, backend: &mut Self::Backend, element: impl Borrow<T>) {
         let x = self.build_hasher.hash_one(element.borrow());
         let j = x & self.num_registers_minus_1;
-        let r =
-            ((x >> self.log_2_num_registers) | self.sentinel_mask).trailing_zeros() as HashResult;
+        // The number of trailing zeroes is certainly expressible in
+        // a variable of type W
+        let r = ((x >> self.log_2_num_registers) | self.sentinel_mask)
+            .trailing_zeros()
+            .as_to();
         let register = j as usize;
 
-        debug_assert!(r < (1 << self.register_size) - 1);
+        debug_assert!(r < (W::ONE << self.register_size) - W::ONE);
         debug_assert!(register < self.num_registers);
 
         let current_value = self.get_register_unchecked(&*backend, register);
-        let candidate_value = r + 1;
-        let new_value = std::cmp::max(current_value, candidate_value.as_());
+        let candidate_value = r + W::ONE;
+        let new_value = std::cmp::max(current_value, candidate_value);
         if current_value != new_value {
             self.set_register_unchecked(backend, register, new_value);
         }
@@ -181,7 +182,8 @@ where
         let mut zeroes = 0;
 
         for i in 0..self.num_registers {
-            let value: u64 = self.get_register_unchecked(backend, i).into();
+            // Registers are at most 8 bits wide
+            let value: u32 = self.get_register_unchecked(backend, i).as_to();
             if value == 0 {
                 zeroes += 1;
             }
@@ -213,10 +215,9 @@ pub struct HyperLogLogHelper<W> {
     mask: Vec<W>,
 }
 
-impl<T: Hash, H: BuildHasher + Clone, W: Word + Into<u64>> MergeEstimationLogic
-    for HyperLogLog<T, H, W>
+impl<T: Hash, H: BuildHasher + Clone, W: Word> MergeEstimationLogic for HyperLogLog<T, H, W>
 where
-    u64: AsPrimitive<W>,
+    u32: PrimitiveNumberAs<W>,
 {
     type Helper = HyperLogLogHelper<W>;
 
@@ -243,7 +244,7 @@ where
 
 /// Builds a [`HyperLogLog`] cardinality-estimator logic.
 #[derive(Debug, Clone)]
-pub struct HyperLogLogBuilder<H, W = PlatformWord> {
+pub struct HyperLogLogBuilder<H, W = usize> {
     build_hasher: H,
     log_2_num_registers: usize,
     num_elements: usize,

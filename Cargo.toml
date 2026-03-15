@@ -1,6 +1,6 @@
 [package]
 name = "card-est-array"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2024"
 description = "Infrastructure for managing large arrays of cardinality estimators."
 repository = "https://github.com/vigna/card-est-array-rs/"
@@ -19,7 +19,6 @@ slow_tests = []
 
 [dependencies]
 num-primitive = "=0.2.1"
-num-traits = { version = "0.2.19", features = ["i128"] }
 sync-cell-slice = "0.9.12"
 
 [dev-dependencies]
