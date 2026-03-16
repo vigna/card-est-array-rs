@@ -1,13 +1,12 @@
 # Arrays of Cardinality Estimators
 
-[![downloads](https://img.shields.io/crates/d/card-est-array)](https://crates.io/crates/card-est-array)
-[![dependents](https://img.shields.io/librariesio/dependents/cargo/card-est-array)](https://crates.io/crates/card-est-array/reverse_dependencies)
-![GitHub CI](https://github.com/vigna/card-est-array-rs/actions/workflows/rust.yml/badge.svg)
+[![crates.io](https://img.shields.io/crates/v/card-est-array.svg)](https://crates.io/crates/card-est-array)
+[![docs.rs](https://docs.rs/card-est-array/badge.svg)](https://docs.rs/card-est-array)
+[![rustc](https://img.shields.io/badge/rustc-1.85+-red.svg)](https://rust-lang.github.io/rfcs/2495-min-rust-version.html)
+[![CI](https://github.com/vigna/card-est-array-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/vigna/card-est-array-rs/actions)
 ![license](https://img.shields.io/crates/l/card-est-array)
-[![Line Count](https://tokei.rs/b1/github/vigna/card-est-array-rs?type=Rust,Python)](https://github.com/vigna/card-est-array-rs)
-[![Latest Version](https://img.shields.io/crates/v/card-est-array.svg)](https://crates.io/crates/card-est-array)
-[![Documentation](https://docs.rs/card-est-array/badge.svg)](https://docs.rs/card-est-array)
-[![Coverage Status](https://coveralls.io/repos/github/vigna/card-est-array-rs/badge.svg?branch=main)](https://coveralls.io/github/vigna/card-est-array-rs?branch=main)  
+[![downloads](https://img.shields.io/crates/d/card-est-array)](https://crates.io/crates/card-est-array)
+[![coveralls](https://coveralls.io/repos/github/vigna/card-est-array-rs/badge.svg?branch=main)](https://coveralls.io/github/vigna/card-est-array-rs?branch=main)
 
 Infrastructure for managing large arrays of cardinality estimators.
 

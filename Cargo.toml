@@ -3,7 +3,7 @@ name = "card-est-array"
 version = "0.4.0"
 edition = "2024"
 description = "Infrastructure for managing large arrays of cardinality estimators."
-repository = "https://github.com/vigna/card-est-array-rs/"
+repository = "https://github.com/vigna/card-est-array-rs"
 license = "Apache-2.0 OR LGPL-2.1-or-later"
 readme = "README.md"
 keywords = ["cardinality", "estimator"]
@@ -12,7 +12,7 @@ authors = [
 	"Matteo Dell'Acqua <dellacqua.matteo99@gmail.com>",
 	"Sebastiano Vigna <sebastiano.vigna@unimi.it>",
 ]
-rust-version = "1.85.0"
+rust-version = "1.85"
 
 [features]
 slow_tests = []
