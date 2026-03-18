@@ -60,8 +60,7 @@ fn test_min_log_2_num_reg() {
     test_word::<usize>();
 }
 
-#[test]
-fn test_single() {
+fn do_test_single<const BETA: bool>() {
     let sizes = SIZES;
     let log2ms = [4, 6, 8, 12];
 
@@ -75,6 +74,7 @@ fn test_single() {
                     .word_type::<u16>()
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
+                    .beta::<BETA>()
                     .build();
                 let mut est = logic.new_estimator();
                 let incr = (1 << 32) / size as i64;
@@ -93,9 +93,10 @@ fn test_single() {
 
             assert!(
                 correct >= REQUIRED_TRIALS,
-                "assertion failed for size {} and log2m {}: correct = {} < {}",
+                "assertion failed for size {} and log2m {} (BETA={}): correct = {} < {}",
                 size,
                 log2m,
+                BETA,
                 correct,
                 REQUIRED_TRIALS
             );
@@ -104,7 +105,12 @@ fn test_single() {
 }
 
 #[test]
-fn test_double() {
+fn test_single() {
+    do_test_single::<true>();
+    do_test_single::<false>();
+}
+
+fn do_test_double<const BETA: bool>() {
     let sizes = SIZES;
     let log2ms = [4, 6, 8, 12];
 
@@ -119,6 +125,7 @@ fn test_double() {
                     .word_type::<u16>()
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
+                    .beta::<BETA>()
                     .build();
                 let mut est_0 = logic.new_estimator();
                 let mut est_1 = logic.new_estimator();
@@ -142,17 +149,19 @@ fn test_double() {
 
             assert!(
                 correct_0 >= REQUIRED_TRIALS,
-                "assertion failed for size {} and log2m {}: correct_0 = {} < {}",
+                "assertion failed for size {} and log2m {} (BETA={}): correct_0 = {} < {}",
                 size,
                 log2m,
+                BETA,
                 correct_0,
                 REQUIRED_TRIALS
             );
             assert!(
                 correct_1 >= REQUIRED_TRIALS,
-                "assertion failed for size {} and log2m {}: correct_1 = {} < {}",
+                "assertion failed for size {} and log2m {} (BETA={}): correct_1 = {} < {}",
                 size,
                 log2m,
+                BETA,
                 correct_1,
                 REQUIRED_TRIALS
             );
@@ -161,7 +170,12 @@ fn test_double() {
 }
 
 #[test]
-fn test_merge() {
+fn test_double() {
+    do_test_double::<true>();
+    do_test_double::<false>();
+}
+
+fn do_test_merge<const BETA: bool>() {
     let sizes = SIZES;
     let log2ms = [4, 6, 8, 12];
 
@@ -176,6 +190,7 @@ fn test_merge() {
                     .word_type::<u16>()
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
+                    .beta::<BETA>()
                     .build();
                 let mut est_0 = logic.new_estimator();
                 let mut est_1 = logic.new_estimator();
@@ -202,17 +217,19 @@ fn test_merge() {
 
             assert!(
                 correct_0 >= REQUIRED_TRIALS,
-                "assertion failed for size {} and log2m {}: correct_0 = {} < {}",
+                "assertion failed for size {} and log2m {} (BETA={}): correct_0 = {} < {}",
                 size,
                 log2m,
+                BETA,
                 correct_0,
                 REQUIRED_TRIALS
             );
             assert!(
                 correct_1 >= REQUIRED_TRIALS,
-                "assertion failed for size {} and log2m {}: correct_1 = {} < {}",
+                "assertion failed for size {} and log2m {} (BETA={}): correct_1 = {} < {}",
                 size,
                 log2m,
+                BETA,
                 correct_1,
                 REQUIRED_TRIALS
             );
@@ -221,7 +238,12 @@ fn test_merge() {
 }
 
 #[test]
-fn test_merge_array() {
+fn test_merge() {
+    do_test_merge::<true>();
+    do_test_merge::<false>();
+}
+
+fn do_test_merge_array<const BETA: bool>() {
     let sizes = SIZES;
     let log2ms = [4, 6, 8, 12];
 
@@ -236,6 +258,7 @@ fn test_merge_array() {
                     .word_type::<u16>()
                     .log_2_num_reg(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
+                    .beta::<BETA>()
                     .build();
                 let mut estimators = SliceEstimatorArray::new(logic, 2);
                 let incr = (1 << 32) / (size * 2) as i64;
@@ -268,20 +291,28 @@ fn test_merge_array() {
 
             assert!(
                 correct_0 >= REQUIRED_TRIALS,
-                "assertion failed for size {} and log2m {}: correct_0 = {} < {}",
+                "assertion failed for size {} and log2m {} (BETA={}): correct_0 = {} < {}",
                 size,
                 log2m,
+                BETA,
                 correct_0,
                 REQUIRED_TRIALS
             );
             assert!(
                 correct_1 >= REQUIRED_TRIALS,
-                "assertion failed for size {} and log2m {}: correct_1 = {} < {}",
+                "assertion failed for size {} and log2m {} (BETA={}): correct_1 = {} < {}",
                 size,
                 log2m,
+                BETA,
                 correct_1,
                 REQUIRED_TRIALS
             );
         }
     }
+}
+
+#[test]
+fn test_merge_array() {
+    do_test_merge_array::<true>();
+    do_test_merge_array::<false>();
 }

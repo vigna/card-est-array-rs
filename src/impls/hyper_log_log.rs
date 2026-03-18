@@ -33,10 +33,201 @@ const NEG_POW2_TABLE: [f64; 129] = {
     table
 };
 
+/// LogLog-β polynomial coefficients for precision *p* in [4 . . 18].
+///
+/// Indexed as `LOGLOG_BETA[p - 4]`. Each row holds β₀, β₁, …, β₇ used by
+/// [`beta_horner`].
+const LOGLOG_BETA: [[f64; 8]; 15] = [
+    // p = 4
+    [
+        -0.582581413904517,
+        -1.935_300_357_560_05,
+        11.079323758035073,
+        -22.131357446444323,
+        22.505391846630037,
+        -12.000723834917984,
+        3.220579408194167,
+        -0.342225302271235,
+    ],
+    // p = 5
+    [
+        -0.7518999460733967,
+        -0.959_003_007_774_876,
+        5.599_737_132_214_161,
+        -8.209_763_699_976_552,
+        6.509_125_489_447_204,
+        -2.683_029_373_432_373,
+        0.5612891113138221,
+        -0.0463331622196545,
+    ],
+    // p = 6
+    [
+        29.825_790_096_961_963,
+        -31.328_708_333_772_592,
+        -10.594_252_303_658_228,
+        -11.572_012_568_909_962,
+        3.818_875_437_390_749,
+        -2.416_013_032_853_081,
+        0.4542208940970826,
+        -0.0575155452020420,
+    ],
+    // p = 7
+    [
+        2.810_292_129_082_006,
+        -3.9780498518175995,
+        1.3162680041351582,
+        -3.925_248_633_580_59,
+        2.008_083_575_394_647,
+        -0.7527151937556955,
+        0.1265569894242751,
+        -0.0109946438726240,
+    ],
+    // p = 8
+    [
+        1.006_335_448_875_505_2,
+        -2.005_806_664_051_124,
+        1.643_697_493_665_141_2,
+        -2.705_608_099_405_661_7,
+        1.392_099_802_442_226,
+        -0.464_703_742_721_831_9,
+        0.07384282377269775,
+        -0.00578554885254223,
+    ],
+    // p = 9
+    [
+        -0.09415657458167959,
+        -0.781_309_759_245_505_3,
+        1.715_149_467_507_124_6,
+        -1.737_112_504_065_163_4,
+        0.864_415_084_890_489_2,
+        -0.23819027465047218,
+        0.03343448400269076,
+        -0.00207858528178157,
+    ],
+    // p = 10
+    [
+        -0.25935400670790054,
+        -0.525_983_019_998_058_1,
+        1.489_330_349_258_768_4,
+        -1.296_427_140_849_935_7,
+        0.622_847_562_172_216_2,
+        -0.156_723_267_702_510_4,
+        0.02054415903878563,
+        -0.00112488483925502,
+    ],
+    // p = 11
+    [
+        -4.32325553856025e-01,
+        -1.08450736399632e-01,
+        6.09156550741120e-01,
+        -1.65687801845180e-02,
+        -7.95829341087617e-02,
+        4.71830602102918e-02,
+        -7.81372902346934e-03,
+        5.84268708489995e-04,
+    ],
+    // p = 12
+    [
+        -3.84979202588598e-01,
+        1.83162233114364e-01,
+        1.30396688841854e-01,
+        7.04838927629266e-02,
+        -8.95893971464453e-03,
+        1.13010036741605e-02,
+        -1.94285569591290e-03,
+        2.25435774024964e-04,
+    ],
+    // p = 13
+    [
+        -0.41655270946462997,
+        -0.22146677040685156,
+        0.38862131236999947,
+        0.453_409_797_460_623_7,
+        -0.36264738324476375,
+        0.12304650053558529,
+        -0.017_015_403_845_555_1,
+        0.00102750367080838,
+    ],
+    // p = 14
+    [
+        -3.71009760230692e-01,
+        9.78811941207509e-03,
+        1.85796293324165e-01,
+        2.03015527328432e-01,
+        -1.16710521803686e-01,
+        4.31106699492820e-02,
+        -5.99583540511831e-03,
+        4.49704299509437e-04,
+    ],
+    // p = 15
+    [
+        -0.38215145543875273,
+        -0.890_694_005_360_908_4,
+        0.376_023_357_746_788_7,
+        0.993_359_774_406_823_8,
+        -0.655_774_416_383_189_6,
+        0.183_323_421_297_036_1,
+        -0.02241529633062872,
+        0.00121399789330194,
+    ],
+    // p = 16
+    [
+        -0.373_318_766_437_530_6,
+        -1.417_040_774_481_23,
+        0.40729184796612533,
+        1.561_520_339_065_841_6,
+        -0.992_422_335_342_861_3,
+        0.260_646_813_994_830_9,
+        -0.03053811369682807,
+        0.00155770210179105,
+    ],
+    // p = 17
+    [
+        -0.36775502299404605,
+        0.538_314_223_513_779_7,
+        0.769_702_892_787_679_2,
+        0.550_025_835_864_505_6,
+        -0.745_755_882_611_469_4,
+        0.257_118_357_858_219_5,
+        -0.03437902606864149,
+        0.00185949146371616,
+    ],
+    // p = 18
+    [
+        -0.364_796_233_259_605_4,
+        0.997_304_123_286_350_3,
+        1.553_543_862_300_812_2,
+        1.259_326_771_980_289_2,
+        -1.533_259_482_091_101_6,
+        0.478_010_422_000_565_9,
+        -0.05951025172951174,
+        0.00291076804642205,
+    ],
+];
+
+/// Computes the LogLog-β bias correction using Horner's method.
+///
+/// The methods appears in the paper from Jason Qin, Denys Kim & Yumei Tung,
+/// “[LogLog-Beta and More: A New Algorithm for Cardinality Estimation Based on
+/// LogLog Counting](https://arxiv.org/pdf/1612.02284)”, 2016.
+pub fn beta_horner(z: f64, precision: usize) -> f64 {
+    let beta = LOGLOG_BETA[precision - 4];
+    let zl = (z + 1.0).ln();
+    let mut res = 0.0;
+    for i in (1..8).rev() {
+        res = res * zl + beta[i];
+    }
+    res * zl + beta[0] * z
+}
+
 /// Estimator logic implementing the HyperLogLog algorithm.
 ///
 /// Instances are built using [`HyperLogLogBuilder`], which provides convenient
-/// ways to set the internal parameters.
+/// ways to set the internal parameter.
+///
+/// The `BETA` boolean parameter controls whether [LogLog-β bias
+/// correction](beta_horner) is applied in the estimate. The correction
+/// improves accuracy across the full cardinality range TODO
 ///
 /// Note that `T` can be any type satisfying the [`Hash`] trait. The parameter
 /// `H` makes it possible to select a hashing algorithm, and `W` is the unsigned
@@ -55,7 +246,7 @@ const NEG_POW2_TABLE: [f64; 129] = {
 /// [`HyperLogLogBuilder::min_log_2_num_reg`] returns the minimum value for
 /// `log_2_num_registers` that satisfies this property.
 #[derive(Debug, PartialEq)]
-pub struct HyperLogLog<T, H, W = usize> {
+pub struct HyperLogLog<T, H, W = usize, const BETA: bool = true> {
     build_hasher: H,
     register_size: usize,
     num_registers_minus_1: HashResult,
@@ -71,7 +262,7 @@ pub struct HyperLogLog<T, H, W = usize> {
 
 // We implement Clone manually because we do not want to require that T is
 // Clone.
-impl<T, H: Clone, W: Clone> Clone for HyperLogLog<T, H, W> {
+impl<T, H: Clone, W: Clone, const BETA: bool> Clone for HyperLogLog<T, H, W, BETA> {
     fn clone(&self) -> Self {
         Self {
             build_hasher: self.build_hasher.clone(),
@@ -89,7 +280,7 @@ impl<T, H: Clone, W: Clone> Clone for HyperLogLog<T, H, W> {
     }
 }
 
-impl<T, H: Clone, W: Word> HyperLogLog<T, H, W> {
+impl<T, H: Clone, W: Word, const BETA: bool> HyperLogLog<T, H, W, BETA> {
     /// Returns the value contained in a register of a given backend.
     #[inline(always)]
     fn get_register_unchecked(&self, backend: impl AsRef<[W]>, index: usize) -> W {
@@ -140,7 +331,8 @@ impl<T, H: Clone, W: Word> HyperLogLog<T, H, W> {
     }
 }
 
-impl<T: Hash, H: BuildHasher + Clone, W: Word> SliceEstimationLogic<W> for HyperLogLog<T, H, W>
+impl<T: Hash, H: BuildHasher + Clone, W: Word, const BETA: bool> SliceEstimationLogic<W>
+    for HyperLogLog<T, H, W, BETA>
 where
     u32: PrimitiveNumberAs<W>,
 {
@@ -150,7 +342,8 @@ where
     }
 }
 
-impl<T: Hash, H: BuildHasher + Clone, W: Word> EstimationLogic for HyperLogLog<T, H, W>
+impl<T: Hash, H: BuildHasher + Clone, W: Word, const BETA: bool> EstimationLogic
+    for HyperLogLog<T, H, W, BETA>
 where
     u32: PrimitiveNumberAs<W>,
 {
@@ -209,11 +402,22 @@ where
                 .unwrap_or_else(|| 2.0f64.powi(-(value as i32)));
         }
 
-        let mut estimate = self.alpha_m_m / harmonic_mean;
-        if zeroes != 0 && estimate < 2.5 * self.num_registers as f64 {
-            estimate = self.num_registers as f64 * (self.num_registers as f64 / zeroes as f64).ln();
+        if BETA && zeroes != 0 && self.log_2_num_registers <= 18 {
+            // LogLog-β: a single formula that replaces both the raw HLL
+            // estimate and the linear-counting small-range correction.
+            let m = self.num_registers as f64;
+            let z = zeroes as f64;
+            let beta = beta_horner(z, self.log_2_num_registers);
+            self.alpha_m_m * (m - z) / (m * (harmonic_mean + beta))
+        } else {
+            // Classic HLL raw estimate with linear-counting correction.
+            let mut estimate = self.alpha_m_m / harmonic_mean;
+            if zeroes != 0 && estimate < 2.5 * self.num_registers as f64 {
+                let m = self.num_registers as f64;
+                estimate = m * (m / zeroes as f64).ln();
+            }
+            estimate
         }
-        estimate
     }
 
     #[inline(always)]
@@ -234,7 +438,8 @@ pub struct HyperLogLogHelper<W> {
     mask: Vec<W>,
 }
 
-impl<T: Hash, H: BuildHasher + Clone, W: Word> MergeEstimationLogic for HyperLogLog<T, H, W>
+impl<T: Hash, H: BuildHasher + Clone, W: Word, const BETA: bool> MergeEstimationLogic
+    for HyperLogLog<T, H, W, BETA>
 where
     u32: PrimitiveNumberAs<W>,
 {
@@ -263,7 +468,7 @@ where
 
 /// Builds a [`HyperLogLog`] cardinality-estimator logic.
 #[derive(Debug, Clone)]
-pub struct HyperLogLogBuilder<H, W = usize> {
+pub struct HyperLogLogBuilder<H, W = usize, const BETA: bool = true> {
     build_hasher: H,
     log_2_num_registers: usize,
     num_elements: usize,
@@ -306,7 +511,7 @@ fn min_alignment(bits: usize) -> String {
     .to_string()
 }
 
-impl HyperLogLog<(), (), ()> {
+impl HyperLogLog<(), (), (), true> {
     /// Returns the logarithm of the number of registers per estimator that are
     /// necessary to attain a given relative standard deviation.
     ///
@@ -347,7 +552,7 @@ impl HyperLogLog<(), (), ()> {
     }
 }
 
-impl<H, W: Word> HyperLogLogBuilder<H, W> {
+impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// Sets the desired relative standard deviation.
     ///
     /// This is a high-level alternative to [`Self::log_2_num_reg`]. Calling one
@@ -402,7 +607,23 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
     ///
     /// See the [`logic documentation`](HyperLogLog) for the limitations on the
     /// choice of `W2`.
-    pub fn word_type<W2>(self) -> HyperLogLogBuilder<H, W2> {
+    pub fn word_type<W2>(self) -> HyperLogLogBuilder<H, W2, BETA> {
+        HyperLogLogBuilder {
+            num_elements: self.num_elements,
+            build_hasher: self.build_hasher,
+            log_2_num_registers: self.log_2_num_registers,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    /// Enables or disables the LogLog-β bias correction in the estimate.
+    ///
+    /// When enabled (the default), the estimate uses the LogLog-β formula
+    /// for precisions 4–18, which provides better accuracy across the
+    /// full cardinality range without a separate linear-counting correction.
+    /// When disabled, the classic HyperLogLog formula with linear-counting
+    /// fallback is used.
+    pub fn beta<const BETA2: bool>(self) -> HyperLogLogBuilder<H, W, BETA2> {
         HyperLogLogBuilder {
             num_elements: self.num_elements,
             build_hasher: self.build_hasher,
@@ -429,7 +650,7 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
     ///
     /// Using this method you can select a specific hasher based on one or more
     /// seeds.
-    pub fn build_hasher<H2>(self, build_hasher: H2) -> HyperLogLogBuilder<H2, W> {
+    pub fn build_hasher<H2>(self, build_hasher: H2) -> HyperLogLogBuilder<H2, W, BETA> {
         HyperLogLogBuilder {
             num_elements: self.num_elements,
             log_2_num_registers: self.log_2_num_registers,
@@ -446,7 +667,7 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
     /// # Panics
     ///
     /// If the estimator size in bits is not divisible by the bit width of `W`.
-    pub fn build<T>(self) -> HyperLogLog<T, H, W> {
+    pub fn build<T>(self) -> HyperLogLog<T, H, W, BETA> {
         let bits = W::BITS as usize;
         let log_2_num_registers = self.log_2_num_registers;
         let num_elements = self.num_elements;
@@ -495,7 +716,7 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
     }
 }
 
-impl<T, H, W> std::fmt::Display for HyperLogLog<T, H, W> {
+impl<T, H, W, const BETA: bool> std::fmt::Display for HyperLogLog<T, H, W, BETA> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
