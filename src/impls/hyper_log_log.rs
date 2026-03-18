@@ -217,31 +217,83 @@ pub fn beta_horner(z: f64, precision: usize) -> f64 {
     res * zl + beta[0] * z
 }
 
+/// Applies the post-loop correction to the harmonic mean and zero count.
+///
+/// This function is `#[inline(never)]` so that the register-iteration loop
+/// in [`estimate`](EstimationLogic::estimate) compiles identically for both
+/// `BETA=true` and `BETA=false`, preventing the post-loop formula from
+/// influencing loop optimizations (vectorization, unrolling, scheduling).
+#[inline(never)]
+fn apply_correction<const BETA: bool>(
+    harmonic_mean: f64,
+    zeroes: usize,
+    num_regs: usize,
+    log2_num_regs: usize,
+    alpha_m_m: f64,
+) -> f64 {
+    if BETA && zeroes != 0 && log2_num_regs <= 18 {
+        // LogLog-β: a single formula that replaces both the raw HyperLogLog
+        // estimate and the linear-counting small-range correction.
+        let m = num_regs as f64;
+        let z = zeroes as f64;
+        let beta = beta_horner(z, log2_num_regs);
+        alpha_m_m * (m - z) / (m * (harmonic_mean + beta))
+    } else {
+        // Classic HyperLogLog raw estimate with linear-counting correction.
+        let mut estimate = alpha_m_m / harmonic_mean;
+        if zeroes != 0 && estimate < 2.5 * num_regs as f64 {
+            let m = num_regs as f64;
+            estimate = m * (m / zeroes as f64).ln();
+        }
+        estimate
+    }
+}
+
 /// Estimator logic implementing the HyperLogLog algorithm.
 ///
-/// Instances are built using [`HyperLogLogBuilder`], which provides convenient
-/// ways to set the internal parameter.
+/// Instances are created through [`HyperLogLogBuilder`]:
 ///
-/// The `BETA` boolean parameter controls whether [LogLog-β bias
-/// correction](beta_horner) is applied in the estimate. The correction improves
-/// accuracy across the full cardinality range, but it costs a couple of dozen
-/// nanoseconds per estimate if there are registers containing zeros. The impact
-/// is detectable only for counters made of very few registers.
+/// ```
+/// # use card_est_array::impls::HyperLogLogBuilder;
+/// // Default: LogLog-β correction enabled, usize backend
+/// let logic = HyperLogLogBuilder::new(1_000_000)
+///     .log2_num_regs(8)
+///     .build::<String>();
 ///
-/// Note that `T` can be any type satisfying the [`Hash`] trait. The parameter
-/// `H` makes it possible to select a hashing algorithm, and `W` is the unsigned
-/// type used to store backends.
+/// // Disable LogLog-β, use classic HLL + linear-counting fallback
+/// let logic = HyperLogLogBuilder::new(1_000_000)
+///     .log2_num_regs(8)
+///     .beta::<false>()
+///     .build::<String>();
+/// ```
 ///
-/// An important constraint is that `W` must be able to represent exactly the
-/// backend of an estimator. While usually `usize` will work (and it is the default
-/// type chosen by [`new`](HyperLogLogBuilder::new)), with odd register sizes
-/// and a small number of registers it might be necessary to select a smaller
-/// type, resulting in slower merges. For example, using 16 5-bit registers one
-/// needs to use `u16`, whereas for 16 6-bit registers `u32` will be sufficient.
+/// # Type parameters
 ///
-/// Formally, this means that `W::BITS` must divide
-/// `(1 << log2_num_regs) * register_size` (using
-/// [`HyperLogLog::register_size(num_elements)`](HyperLogLog::register_size)).
+/// - `T`: the type of elements to count (must implement [`Hash`]).
+/// - `H`: the [`BuildHasher`](std::hash::BuildHasher) used to hash elements.
+/// - `W`: the unsigned word type for the register backend (see below).
+/// - `BETA`: when `true` (the default), the
+///   [LogLog-β](beta_horner) bias correction from [Qin, Kim & Tung
+///   (2016)](https://arxiv.org/pdf/1612.02284) is used during estimation.
+///   This provides better accuracy across the full cardinality range through
+///   a single formula, eliminating the need for a separate linear-counting
+///   correction. The cost is roughly 15–22 ns per estimate call when some
+///   registers are still zero; when all registers are populated, the
+///   correction is skipped and performance is identical to the classic
+///   formula. Set to `false` via [`HyperLogLogBuilder::beta`] to use the
+///   original HyperLogLog formula instead.
+///
+/// # Backend alignment
+///
+/// `W` must be able to represent exactly the backend of an estimator. While
+/// usually `usize` will work (and it is the default type chosen by
+/// [`HyperLogLogBuilder::new`]), with odd register sizes and a small number
+/// of registers it might be necessary to select a smaller type, resulting in
+/// slower merges. For example, using 16 5-bit registers one needs to use
+/// `u16`, whereas for 16 6-bit registers `u32` will be sufficient.
+///
+/// Formally, `W::BITS` must divide `(1 << log2_num_regs) * register_size`
+/// (using [`HyperLogLog::register_size(num_elements)`](HyperLogLog::register_size)).
 /// [`HyperLogLogBuilder::min_log2_num_regs`] returns the minimum value for
 /// `log2_num_regs` that satisfies this property.
 #[derive(Debug, PartialEq)]
@@ -388,7 +440,7 @@ where
             "NEG_POW2_TABLE has 129 entries, which is sufficient for hash types up to 128 bits"
         );
         let mut harmonic_mean = 0.0;
-        let mut zeroes = 0;
+        let mut zeroes = 0usize;
 
         for i in 0..self.num_regs {
             let value: usize = self.get_register_unchecked(backend, i).as_to();
@@ -401,22 +453,13 @@ where
                 .unwrap_or_else(|| 2.0f64.powi(-(value as i32)));
         }
 
-        if BETA && zeroes != 0 && self.log2_num_regs <= 18 {
-            // LogLog-β: a single formula that replaces both the raw HyperLogLog
-            // estimate and the linear-counting small-range correction.
-            let m = self.num_regs as f64;
-            let z = zeroes as f64;
-            let beta = beta_horner(z, self.log2_num_regs);
-            self.alpha_m_m * (m - z) / (m * (harmonic_mean + beta))
-        } else {
-            // Classic HyperLogLog raw estimate with linear-counting correction.
-            let mut estimate = self.alpha_m_m / harmonic_mean;
-            if zeroes != 0 && estimate < 2.5 * self.num_regs as f64 {
-                let m = self.num_regs as f64;
-                estimate = m * (m / zeroes as f64).ln();
-            }
-            estimate
-        }
+        apply_correction::<BETA>(
+            harmonic_mean,
+            zeroes,
+            self.num_regs,
+            self.log2_num_regs,
+            self.alpha_m_m,
+        )
     }
 
     #[inline(always)]
@@ -465,7 +508,21 @@ where
     }
 }
 
-/// Builds a [`HyperLogLog`] cardinality-estimator logic.
+/// Builder for [`HyperLogLog`] cardinality-estimator logic.
+///
+/// The builder lets you configure:
+/// - the upper bound on the number of distinct elements
+///   ([`new`](Self::new) / [`num_elements`](Self::num_elements));
+/// - the number of registers, either directly
+///   ([`log2_num_regs`](Self::log2_num_regs)) or via a target relative
+///   standard deviation ([`rsd`](Self::rsd));
+/// - the backend word type ([`word_type`](Self::word_type));
+/// - the hash function ([`build_hasher`](Self::build_hasher));
+/// - whether [LogLog-β bias correction](beta_horner) is enabled
+///   ([`beta`](Self::beta)).
+///
+/// Call [`build`](Self::build) to obtain the configured [`HyperLogLog`]
+/// logic.
 #[derive(Debug, Clone)]
 pub struct HyperLogLogBuilder<H, W = usize, const BETA: bool = true> {
     build_hasher: H,
@@ -615,13 +672,23 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
         }
     }
 
-    /// Enables or disables the LogLog-β bias correction in the estimate.
+    /// Enables or disables the [LogLog-β bias correction](beta_horner) in
+    /// the estimate.
     ///
     /// When enabled (the default), the estimate uses the LogLog-β formula
-    /// for precisions 4–18, which provides better accuracy across the
-    /// full cardinality range without a separate linear-counting correction.
+    /// for precisions 4–18, which provides better accuracy across the full
+    /// cardinality range without a separate linear-counting correction.
     /// When disabled, the classic HyperLogLog formula with linear-counting
     /// fallback is used.
+    ///
+    /// ```
+    /// # use card_est_array::impls::HyperLogLogBuilder;
+    /// // Disable LogLog-β correction
+    /// let logic = HyperLogLogBuilder::new(1_000_000)
+    ///     .log2_num_regs(8)
+    ///     .beta::<false>()
+    ///     .build::<usize>();
+    /// ```
     pub fn beta<const BETA2: bool>(self) -> HyperLogLogBuilder<H, W, BETA2> {
         HyperLogLogBuilder {
             num_elements: self.num_elements,
