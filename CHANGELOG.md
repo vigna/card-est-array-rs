@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.4.1] - 2026-0-18
+
+### Improved
+
+- New, table-based, 4x faster estimation of HyperLogLog cardinality.
+
 ## [0.4.0] - 2026-03-15
 
 ### New

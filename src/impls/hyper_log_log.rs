@@ -19,6 +19,20 @@ use super::DefaultEstimator;
 /// The type returned by the hash function.
 type HashResult = u64;
 
+/// Precomputed table of 2⁻*ⁿ* for *n* in [0 . . 128), used to replace
+/// [`powi`](f64::powi) calls in the estimate loop. Computed at compile time
+/// using the IEEE 754 representation: 2⁻*ⁿ* has exponent 1023 − *n* and zero
+/// mantissa.
+const NEG_POW2_TABLE: [f64; 129] = {
+    let mut table = [0.0f64; 129];
+    let mut i = 0u64;
+    while i < 129 {
+        table[i as usize] = f64::from_bits((1023 - i) << 52);
+        i += 1;
+    }
+    table
+};
+
 /// Estimator logic implementing the HyperLogLog algorithm.
 ///
 /// Instances are built using [`HyperLogLogBuilder`], which provides convenient
@@ -157,14 +171,13 @@ where
     }
 
     fn add(&self, backend: &mut Self::Backend, element: impl Borrow<T>) {
-        let x = self.build_hasher.hash_one(element.borrow());
-        let j = x & self.num_registers_minus_1;
+        let hash = self.build_hasher.hash_one(element.borrow());
+        let register = (hash & self.num_registers_minus_1) as usize;
         // The number of trailing zeroes is certainly expressible in
         // a variable of type W
-        let r = ((x >> self.log_2_num_registers) | self.sentinel_mask)
+        let r = ((hash >> self.log_2_num_registers) | self.sentinel_mask)
             .trailing_zeros()
             .as_to();
-        let register = j as usize;
 
         debug_assert!(r < (W::ONE << self.register_size) - W::ONE);
         debug_assert!(register < self.num_registers);
@@ -178,16 +191,22 @@ where
     }
 
     fn estimate(&self, backend: &[W]) -> f64 {
+        const _: () = assert!(
+            size_of::<HashResult>() <= 16,
+            "NEG_POW2_TABLE has 129 entries, which is sufficient for hash types up to 128 bits"
+        );
         let mut harmonic_mean = 0.0;
         let mut zeroes = 0;
 
         for i in 0..self.num_registers {
-            // Registers are at most 8 bits wide
-            let value: u32 = self.get_register_unchecked(backend, i).as_to();
+            let value: usize = self.get_register_unchecked(backend, i).as_to();
             if value == 0 {
                 zeroes += 1;
             }
-            harmonic_mean += 1.0 / (1_u64 << value) as f64;
+            harmonic_mean += NEG_POW2_TABLE
+                .get(value)
+                .copied()
+                .unwrap_or_else(|| 2.0f64.powi(-(value as i32)));
         }
 
         let mut estimate = self.alpha_m_m / harmonic_mean;
@@ -331,8 +350,6 @@ impl HyperLogLog<(), (), ()> {
 impl<H, W: Word> HyperLogLogBuilder<H, W> {
     /// Sets the desired relative standard deviation.
     ///
-    /// ## Note
-    ///
     /// This is a high-level alternative to [`Self::log_2_num_reg`]. Calling one
     /// after the other invalidates the work done by the first one.
     ///
@@ -349,7 +366,6 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
 
     /// Sets the base-2 logarithm of the number of registers.
     ///
-    /// ## Note
     /// This is a low-level alternative to [`Self::rsd`]. Calling one after the
     /// other invalidates the work done by the first one.
     ///
@@ -369,8 +385,8 @@ impl<H, W: Word> HyperLogLogBuilder<H, W> {
         self
     }
 
-    /// Returns the minimum value allowed for [`Self::log_2_num_reg`] given the current value of
-    /// [`Self::num_elements`].
+    /// Returns the minimum value allowed for [`Self::log_2_num_reg`] given the
+    /// current value of [`Self::num_elements`].
     pub fn min_log_2_num_reg(&self) -> usize {
         let register_size = HyperLogLog::register_size(self.num_elements);
         let register_size = NonZeroUsize::try_from(register_size).expect("register_size is zero");

@@ -22,4 +22,9 @@ num-primitive = "=0.2.1"
 sync-cell-slice = "0.9.12"
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+
+[[bench]]
+name = "estimate"
+harness = false
