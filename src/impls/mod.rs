@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
-mod hyper_log_log;
-pub use hyper_log_log::*;
+pub mod hyper_log_log;
+pub use hyper_log_log::{HyperLogLog, HyperLogLogBuilder, HyperLogLogHelper};
 
 mod slice_estimator_array;
 pub use slice_estimator_array::*;

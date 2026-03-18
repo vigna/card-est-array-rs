@@ -270,17 +270,18 @@ fn apply_correction<const BETA: bool>(
 /// # Type parameters
 ///
 /// - `T`: the type of elements to count (must implement [`Hash`]).
-/// - `H`: the [`BuildHasher`](std::hash::BuildHasher) used to hash elements.
+///
+/// - `H`: the [`BuildHasher` used to hash elements.
+///
 /// - `W`: the unsigned word type for the register backend (see below).
-/// - `BETA`: when `true` (the default), the
-///   [LogLog-β](beta_horner) bias correction from [Qin, Kim & Tung
-///   (2016)](https://arxiv.org/pdf/1612.02284) is used during estimation.
-///   This provides better accuracy across the full cardinality range through
-///   a single formula, eliminating the need for a separate linear-counting
-///   correction. The cost is roughly 15–22 ns per estimate call when some
-///   registers are still zero; when all registers are populated, the
-///   correction is skipped and performance is identical to the classic
-///   formula. Set to `false` via [`HyperLogLogBuilder::beta`] to use the
+///
+/// - `BETA`: when `true` (the default), the [LogLog-β](beta_horner) bias
+///   correction is used during estimation. This provides better accuracy across
+///   the full cardinality range through a single formula, eliminating the need
+///   for a separate linear-counting correction. The cost is roughly 20ns per
+///   estimate call when some registers are still zero; when all registers are
+///   populated, the correction is skipped and performance is identical to the
+///   classic formula. Set to `false` via [`HyperLogLogBuilder::beta`] to use the
 ///   original HyperLogLog formula instead.
 ///
 /// # Backend alignment
@@ -675,9 +676,13 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// Enables or disables the [LogLog-β bias correction](beta_horner) in
     /// the estimate.
     ///
-    /// When enabled (the default), the estimate uses the LogLog-β formula
-    /// for precisions 4–18, which provides better accuracy across the full
-    /// cardinality range without a separate linear-counting correction.
+    /// When enabled (the default), the estimate uses the LogLog-β formula for
+    /// precisions 4–18, which provides better accuracy across the full
+    /// cardinality range without a separate linear-counting correction, at the
+    /// cost of roughly 20ns per estimate call when some registers are still
+    /// zero. When all registers are populated, the correction is skipped and
+    /// performance is identical to the classic formula.
+    ///
     /// When disabled, the classic HyperLogLog formula with linear-counting
     /// fallback is used.
     ///
