@@ -26,5 +26,5 @@ criterion = { version = "0.5", features = ["html_reports"] }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 
 [[bench]]
-name = "estimate"
+name = "bench_estimate"
 harness = false
