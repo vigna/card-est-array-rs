@@ -26,16 +26,16 @@ const SIZES: &[usize] = &[1, 10, 100, 1000, 100_000];
 const SIZES: &[usize] = &[1, 10, 100, 1000];
 
 #[test]
-fn test_min_log_2_num_reg() {
+fn test_min_log2_num_regs() {
     fn test_word<W: Word>() {
         let sizes = SIZES;
 
         for &size in sizes {
             let builder = HyperLogLogBuilder::new(size).word_type::<W>();
-            let min_log2m = builder.min_log_2_num_reg();
+            let min_log2m = builder.min_log2_num_regs();
 
             let result =
-                std::panic::catch_unwind(|| builder.clone().log_2_num_reg(min_log2m).build::<()>());
+                std::panic::catch_unwind(|| builder.clone().log2_num_regs(min_log2m).build::<()>());
             assert!(
                 result.is_ok(),
                 "size={size} with W={} gives min_log2m={min_log2m}, which is not valid",
@@ -43,7 +43,7 @@ fn test_min_log_2_num_reg() {
             );
 
             let result =
-                std::panic::catch_unwind(|| builder.log_2_num_reg(min_log2m - 1).build::<()>());
+                std::panic::catch_unwind(|| builder.log2_num_regs(min_log2m - 1).build::<()>());
             assert!(
                 result.is_err(),
                 "size={size} with W={} gives min_log2m={min_log2m}, but log2m={} is valid too",
@@ -72,7 +72,7 @@ fn do_test_single<const BETA: bool>() {
             for trial in 0..NUM_TRIALS {
                 let logic = HyperLogLogBuilder::new(size)
                     .word_type::<u16>()
-                    .log_2_num_reg(log2m)
+                    .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
                     .build();
@@ -123,7 +123,7 @@ fn do_test_double<const BETA: bool>() {
             for trial in 0..NUM_TRIALS {
                 let logic = HyperLogLogBuilder::new(size)
                     .word_type::<u16>()
-                    .log_2_num_reg(log2m)
+                    .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
                     .build();
@@ -188,7 +188,7 @@ fn do_test_merge<const BETA: bool>() {
             for trial in 0..NUM_TRIALS {
                 let logic = HyperLogLogBuilder::new(size)
                     .word_type::<u16>()
-                    .log_2_num_reg(log2m)
+                    .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
                     .build();
@@ -256,7 +256,7 @@ fn do_test_merge_array<const BETA: bool>() {
             for trial in 0..NUM_TRIALS {
                 let logic = HyperLogLogBuilder::new(size)
                     .word_type::<u16>()
-                    .log_2_num_reg(log2m)
+                    .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
                     .build();

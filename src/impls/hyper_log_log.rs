@@ -223,8 +223,10 @@ pub fn beta_horner(z: f64, precision: usize) -> f64 {
 /// ways to set the internal parameter.
 ///
 /// The `BETA` boolean parameter controls whether [LogLog-β bias
-/// correction](beta_horner) is applied in the estimate. The correction
-/// improves accuracy across the full cardinality range TODO
+/// correction](beta_horner) is applied in the estimate. The correction improves
+/// accuracy across the full cardinality range, but it costs a couple of dozen
+/// nanoseconds per estimate if there are registers containing zeros. The impact
+/// is detectable only for counters made of very few registers.
 ///
 /// Note that `T` can be any type satisfying the [`Hash`] trait. The parameter
 /// `H` makes it possible to select a hashing algorithm, and `W` is the unsigned

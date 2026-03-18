@@ -7,7 +7,7 @@ const N: usize = 1_000_000;
 const ITERS: usize = 100_000_000;
 
 fn main() {
-    let logic = HyperLogLogBuilder::new(N).log_2_num_reg(6).build::<usize>();
+    let logic = HyperLogLogBuilder::new(N).log2_num_regs(6).build::<usize>();
 
     let mut array = SliceEstimatorArray::new(logic.clone(), 1);
     for i in 0..N {
