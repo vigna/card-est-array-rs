@@ -1,10 +1,15 @@
 # Change Log
 
-## [0.4.1] - 2026-0-18
+## [0.5.0] - 2026-0-18
 
 ### Improved
 
 - New, table-based, 4x faster estimation of HyperLogLog cardinality.
+
+### Changed
+
+- `HyperLogLog` methods names use `log2` instead of `log_2` and `regs`
+  instead of `registers`.
 
 ## [0.4.0] - 2026-03-15
 

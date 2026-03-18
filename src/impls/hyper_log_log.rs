@@ -5,16 +5,13 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
+use super::DefaultEstimator;
+use crate::traits::Word;
+use crate::traits::{EstimationLogic, MergeEstimationLogic, SliceEstimationLogic};
 use num_primitive::{PrimitiveNumber, PrimitiveNumberAs};
 use std::hash::*;
 use std::num::NonZeroUsize;
 use std::{borrow::Borrow, f64::consts::LN_2};
-
-use crate::traits::Word;
-
-use crate::traits::{EstimationLogic, MergeEstimationLogic, SliceEstimationLogic};
-
-use super::DefaultEstimator;
 
 /// The type returned by the hash function.
 type HashResult = u64;
@@ -33,12 +30,12 @@ const NEG_POW2_TABLE: [f64; 129] = {
     table
 };
 
-/// LogLog-β polynomial coefficients for precision *p* in [4 . . 18].
+/// LogLog-β polynomial coefficients for `log2_num_regs` in [4 . . 18].
 ///
-/// Indexed as `LOGLOG_BETA[p - 4]`. Each row holds β₀, β₁, …, β₇ used by
-/// [`beta_horner`].
+/// Indexed as `LOGLOG_BETA[log2_num_regs - 4]`. Each row holds β₀, β₁, …,
+/// β₇ used by [`beta_horner`].
 const LOGLOG_BETA: [[f64; 8]; 15] = [
-    // p = 4
+    // log2_num_regs =  4
     [
         -0.582581413904517,
         -1.935_300_357_560_05,
@@ -49,7 +46,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         3.220579408194167,
         -0.342225302271235,
     ],
-    // p = 5
+    // log2_num_regs =  5
     [
         -0.7518999460733967,
         -0.959_003_007_774_876,
@@ -60,7 +57,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         0.5612891113138221,
         -0.0463331622196545,
     ],
-    // p = 6
+    // log2_num_regs =  6
     [
         29.825_790_096_961_963,
         -31.328_708_333_772_592,
@@ -71,7 +68,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         0.4542208940970826,
         -0.0575155452020420,
     ],
-    // p = 7
+    // log2_num_regs =  7
     [
         2.810_292_129_082_006,
         -3.9780498518175995,
@@ -82,7 +79,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         0.1265569894242751,
         -0.0109946438726240,
     ],
-    // p = 8
+    // log2_num_regs =  8
     [
         1.006_335_448_875_505_2,
         -2.005_806_664_051_124,
@@ -93,7 +90,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         0.07384282377269775,
         -0.00578554885254223,
     ],
-    // p = 9
+    // log2_num_regs =  9
     [
         -0.09415657458167959,
         -0.781_309_759_245_505_3,
@@ -104,7 +101,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         0.03343448400269076,
         -0.00207858528178157,
     ],
-    // p = 10
+    // log2_num_regs =  10
     [
         -0.25935400670790054,
         -0.525_983_019_998_058_1,
@@ -115,7 +112,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         0.02054415903878563,
         -0.00112488483925502,
     ],
-    // p = 11
+    // log2_num_regs =  11
     [
         -4.32325553856025e-01,
         -1.08450736399632e-01,
@@ -126,7 +123,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         -7.81372902346934e-03,
         5.84268708489995e-04,
     ],
-    // p = 12
+    // log2_num_regs =  12
     [
         -3.84979202588598e-01,
         1.83162233114364e-01,
@@ -137,7 +134,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         -1.94285569591290e-03,
         2.25435774024964e-04,
     ],
-    // p = 13
+    // log2_num_regs =  13
     [
         -0.41655270946462997,
         -0.22146677040685156,
@@ -148,7 +145,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         -0.017_015_403_845_555_1,
         0.00102750367080838,
     ],
-    // p = 14
+    // log2_num_regs =  14
     [
         -3.71009760230692e-01,
         9.78811941207509e-03,
@@ -241,18 +238,18 @@ pub fn beta_horner(z: f64, precision: usize) -> f64 {
 /// needs to use `u16`, whereas for 16 6-bit registers `u32` will be sufficient.
 ///
 /// Formally, this means that `W::BITS` must divide
-/// `(1 << log_2_num_registers) * register_size` (using
+/// `(1 << log2_num_regs) * register_size` (using
 /// [`HyperLogLog::register_size(num_elements)`](HyperLogLog::register_size)).
-/// [`HyperLogLogBuilder::min_log_2_num_reg`] returns the minimum value for
-/// `log_2_num_registers` that satisfies this property.
+/// [`HyperLogLogBuilder::min_log2_num_regs`] returns the minimum value for
+/// `log2_num_regs` that satisfies this property.
 #[derive(Debug, PartialEq)]
 pub struct HyperLogLog<T, H, W = usize, const BETA: bool = true> {
     build_hasher: H,
     register_size: usize,
-    num_registers_minus_1: HashResult,
-    log_2_num_registers: usize,
+    num_regs_minus_1: HashResult,
+    log2_num_regs: usize,
     sentinel_mask: HashResult,
-    num_registers: usize,
+    num_regs: usize,
     pub(super) words_per_estimator: usize,
     alpha_m_m: f64,
     msb_mask: Box<[W]>,
@@ -267,10 +264,10 @@ impl<T, H: Clone, W: Clone, const BETA: bool> Clone for HyperLogLog<T, H, W, BET
         Self {
             build_hasher: self.build_hasher.clone(),
             register_size: self.register_size,
-            num_registers_minus_1: self.num_registers_minus_1,
-            log_2_num_registers: self.log_2_num_registers,
+            num_regs_minus_1: self.num_regs_minus_1,
+            log2_num_regs: self.log2_num_regs,
             sentinel_mask: self.sentinel_mask,
-            num_registers: self.num_registers,
+            num_regs: self.num_regs,
             words_per_estimator: self.words_per_estimator,
             alpha_m_m: self.alpha_m_m,
             msb_mask: self.msb_mask.clone(),
@@ -365,15 +362,15 @@ where
 
     fn add(&self, backend: &mut Self::Backend, element: impl Borrow<T>) {
         let hash = self.build_hasher.hash_one(element.borrow());
-        let register = (hash & self.num_registers_minus_1) as usize;
+        let register = (hash & self.num_regs_minus_1) as usize;
         // The number of trailing zeroes is certainly expressible in
         // a variable of type W
-        let r = ((hash >> self.log_2_num_registers) | self.sentinel_mask)
+        let r = ((hash >> self.log2_num_regs) | self.sentinel_mask)
             .trailing_zeros()
             .as_to();
 
         debug_assert!(r < (W::ONE << self.register_size) - W::ONE);
-        debug_assert!(register < self.num_registers);
+        debug_assert!(register < self.num_regs);
 
         let current_value = self.get_register_unchecked(&*backend, register);
         let candidate_value = r + W::ONE;
@@ -391,7 +388,7 @@ where
         let mut harmonic_mean = 0.0;
         let mut zeroes = 0;
 
-        for i in 0..self.num_registers {
+        for i in 0..self.num_regs {
             let value: usize = self.get_register_unchecked(backend, i).as_to();
             if value == 0 {
                 zeroes += 1;
@@ -402,18 +399,18 @@ where
                 .unwrap_or_else(|| 2.0f64.powi(-(value as i32)));
         }
 
-        if BETA && zeroes != 0 && self.log_2_num_registers <= 18 {
-            // LogLog-β: a single formula that replaces both the raw HLL
+        if BETA && zeroes != 0 && self.log2_num_regs <= 18 {
+            // LogLog-β: a single formula that replaces both the raw HyperLogLog
             // estimate and the linear-counting small-range correction.
-            let m = self.num_registers as f64;
+            let m = self.num_regs as f64;
             let z = zeroes as f64;
-            let beta = beta_horner(z, self.log_2_num_registers);
+            let beta = beta_horner(z, self.log2_num_regs);
             self.alpha_m_m * (m - z) / (m * (harmonic_mean + beta))
         } else {
-            // Classic HLL raw estimate with linear-counting correction.
+            // Classic HyperLogLog raw estimate with linear-counting correction.
             let mut estimate = self.alpha_m_m / harmonic_mean;
-            if zeroes != 0 && estimate < 2.5 * self.num_registers as f64 {
-                let m = self.num_registers as f64;
+            if zeroes != 0 && estimate < 2.5 * self.num_regs as f64 {
+                let m = self.num_regs as f64;
                 estimate = m * (m / zeroes as f64).ln();
             }
             estimate
@@ -470,7 +467,7 @@ where
 #[derive(Debug, Clone)]
 pub struct HyperLogLogBuilder<H, W = usize, const BETA: bool = true> {
     build_hasher: H,
-    log_2_num_registers: usize,
+    log2_num_regs: usize,
     num_elements: usize,
     _marker: std::marker::PhantomData<W>,
 }
@@ -489,7 +486,7 @@ impl HyperLogLogBuilder<BuildHasherDefault<DefaultHasher>> {
         );
         Self {
             build_hasher: BuildHasherDefault::new(),
-            log_2_num_registers: 4,
+            log2_num_regs: 4,
             num_elements,
             _marker: std::marker::PhantomData,
         }
@@ -517,7 +514,7 @@ impl HyperLogLog<(), (), (), true> {
     ///
     /// # Arguments
     /// * `rsd`: the relative standard deviation to be attained.
-    pub fn log_2_num_of_registers(rsd: f64) -> usize {
+    pub fn log2_num_of_registers(rsd: f64) -> usize {
         ((1.106 / rsd).powi(2)).log2().ceil() as usize
     }
 
@@ -526,17 +523,17 @@ impl HyperLogLog<(), (), (), true> {
     ///
     /// # Arguments
     ///
-    /// * `log_2_num_registers`: the logarithm of the number of registers per
+    /// * `log2_num_regs`: the logarithm of the number of registers per
     ///   estimator.
-    pub fn rel_std(log_2_num_registers: usize) -> f64 {
-        let tmp = match log_2_num_registers {
+    pub fn rel_std(log2_num_regs: usize) -> f64 {
+        let tmp = match log2_num_regs {
             4 => 1.106,
             5 => 1.070,
             6 => 1.054,
             7 => 1.046,
             _ => 1.04,
         };
-        tmp / ((1 << log_2_num_registers) as f64).sqrt()
+        tmp / ((1 << log2_num_regs) as f64).sqrt()
     }
 
     /// Returns the register size in bits, given an upper bound on the number of
@@ -555,7 +552,7 @@ impl HyperLogLog<(), (), (), true> {
 impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// Sets the desired relative standard deviation.
     ///
-    /// This is a high-level alternative to [`Self::log_2_num_reg`]. Calling one
+    /// This is a high-level alternative to [`Self::log2_num_regs`]. Calling one
     /// after the other invalidates the work done by the first one.
     ///
     /// # Arguments
@@ -566,7 +563,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// If the resulting number of registers is less than 16 (i.e., `rsd` is
     /// too large).
     pub fn rsd(self, rsd: f64) -> Self {
-        self.log_2_num_reg(HyperLogLog::log_2_num_of_registers(rsd))
+        self.log2_num_regs(HyperLogLog::log2_num_of_registers(rsd))
     }
 
     /// Sets the base-2 logarithm of the number of registers.
@@ -575,24 +572,24 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// other invalidates the work done by the first one.
     ///
     /// # Arguments
-    /// * `log_2_num_registers`: the logarithm of the number of registers per
+    /// * `log2_num_regs`: the logarithm of the number of registers per
     ///   estimator.
     ///
     /// # Panics
     ///
-    /// If `log_2_num_registers` is less than 4.
-    pub const fn log_2_num_reg(mut self, log_2_num_registers: usize) -> Self {
+    /// If `log2_num_regs` is less than 4.
+    pub const fn log2_num_regs(mut self, log2_num_regs: usize) -> Self {
         assert!(
-            log_2_num_registers >= 4,
+            log2_num_regs >= 4,
             "the logarithm of the number of registers per estimator should be at least 4"
         );
-        self.log_2_num_registers = log_2_num_registers;
+        self.log2_num_regs = log2_num_regs;
         self
     }
 
-    /// Returns the minimum value allowed for [`Self::log_2_num_reg`] given the
+    /// Returns the minimum value allowed for [`Self::log2_num_regs`] given the
     /// current value of [`Self::num_elements`].
-    pub fn min_log_2_num_reg(&self) -> usize {
+    pub fn min_log2_num_regs(&self) -> usize {
         let register_size = HyperLogLog::register_size(self.num_elements);
         let register_size = NonZeroUsize::try_from(register_size).expect("register_size is zero");
         let min_num_regs = W::BITS / highest_power_of_2_dividing(register_size);
@@ -611,7 +608,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
         HyperLogLogBuilder {
             num_elements: self.num_elements,
             build_hasher: self.build_hasher,
-            log_2_num_registers: self.log_2_num_registers,
+            log2_num_regs: self.log2_num_regs,
             _marker: std::marker::PhantomData,
         }
     }
@@ -627,7 +624,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
         HyperLogLogBuilder {
             num_elements: self.num_elements,
             build_hasher: self.build_hasher,
-            log_2_num_registers: self.log_2_num_registers,
+            log2_num_regs: self.log2_num_regs,
             _marker: std::marker::PhantomData,
         }
     }
@@ -653,7 +650,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     pub fn build_hasher<H2>(self, build_hasher: H2) -> HyperLogLogBuilder<H2, W, BETA> {
         HyperLogLogBuilder {
             num_elements: self.num_elements,
-            log_2_num_registers: self.log_2_num_registers,
+            log2_num_regs: self.log2_num_regs,
             build_hasher,
             _marker: std::marker::PhantomData,
         }
@@ -669,27 +666,27 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// If the estimator size in bits is not divisible by the bit width of `W`.
     pub fn build<T>(self) -> HyperLogLog<T, H, W, BETA> {
         let bits = W::BITS as usize;
-        let log_2_num_registers = self.log_2_num_registers;
+        let log2_num_regs = self.log2_num_regs;
         let num_elements = self.num_elements;
-        let number_of_registers = 1 << log_2_num_registers;
+        let number_of_registers = 1 << log2_num_regs;
         let register_size = HyperLogLog::register_size(num_elements);
         let sentinel_mask = 1 << ((1 << register_size) - 2);
-        let alpha = match log_2_num_registers {
+        let alpha = match log2_num_regs {
             4 => 0.673,
             5 => 0.697,
             6 => 0.709,
             _ => 0.7213 / (1.0 + 1.079 / number_of_registers as f64),
         };
-        let num_registers_minus_1 = (number_of_registers - 1) as HashResult;
+        let num_regs_minus_1 = (number_of_registers - 1) as HashResult;
 
         let est_size_in_bits = number_of_registers * register_size;
 
         // This ensures estimators are always aligned to W
         assert!(
             est_size_in_bits % bits == 0,
-            "W should allow estimator backends to be aligned. Use {} or smaller unsigned integer types; or increase log_2_num_registers to be >= {}",
+            "W should allow estimator backends to be aligned. Use {} or smaller unsigned integer types; or increase log2_num_regs to be >= {}",
             min_alignment(est_size_in_bits),
-            self.min_log_2_num_reg(),
+            self.min_log2_num_regs(),
         );
         let est_size_in_words = est_size_in_bits / bits;
 
@@ -701,9 +698,9 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
         let lsb_mask = build_register_mask(est_size_in_words, register_size, W::ONE);
 
         HyperLogLog {
-            num_registers: number_of_registers,
-            num_registers_minus_1,
-            log_2_num_registers,
+            num_regs: number_of_registers,
+            num_regs_minus_1,
+            log2_num_regs,
             register_size,
             alpha_m_m: alpha * (number_of_registers as f64).powi(2),
             sentinel_mask,
@@ -721,10 +718,10 @@ impl<T, H, W, const BETA: bool> std::fmt::Display for HyperLogLog<T, H, W, BETA>
         write!(
             f,
             "HyperLogLog with relative standard deviation: {}% ({} registers/estimator, {} bits/register, {} bytes/estimator)",
-            100.0 * HyperLogLog::rel_std(self.log_2_num_registers),
-            self.num_registers,
+            100.0 * HyperLogLog::rel_std(self.log2_num_regs),
+            self.num_regs,
             self.register_size,
-            (self.num_registers * self.register_size) / 8
+            (self.num_regs * self.register_size) / 8
         )
     }
 }
