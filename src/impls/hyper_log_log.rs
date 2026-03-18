@@ -142,7 +142,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         -5.99583540511831e-03,
         4.49704299509437e-04,
     ],
-    // p = 15
+    // log2_num_regs = 15
     [
         -0.38215145543875273,
         -0.890_694_005_360_908_4,
@@ -153,7 +153,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         -0.02241529633062872,
         0.00121399789330194,
     ],
-    // p = 16
+    // log2_num_regs = 16
     [
         -0.373_318_766_437_530_6,
         -1.417_040_774_481_23,
@@ -164,7 +164,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         -0.03053811369682807,
         0.00155770210179105,
     ],
-    // p = 17
+    // log2_num_regs = 17
     [
         -0.36775502299404605,
         0.538_314_223_513_779_7,
@@ -175,7 +175,7 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
         -0.03437902606864149,
         0.00185949146371616,
     ],
-    // p = 18
+    // log2_num_regs = 18
     [
         -0.364_796_233_259_605_4,
         0.997_304_123_286_350_3,
@@ -190,9 +190,13 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
 
 /// Computes the LogLog-β bias correction using Horner's method.
 ///
-/// The methods appears in the paper from Jason Qin, Denys Kim & Yumei Tung,
+/// The method appears in the paper from Jason Qin, Denys Kim & Yumei Tung,
 /// “[LogLog-Beta and More: A New Algorithm for Cardinality Estimation Based on
 /// LogLog Counting](https://arxiv.org/pdf/1612.02284)”, 2016.
+///
+/// # Panics
+///
+/// If `precision` is not in [4 . . 18].
 pub fn beta_horner(z: f64, precision: usize) -> f64 {
     let beta = LOGLOG_BETA[precision - 4];
     let zl = (z + 1.0).ln();
@@ -257,7 +261,7 @@ fn apply_correction<const BETA: bool>(
 ///
 /// - `T`: the type of elements to count (must implement [`Hash`]).
 ///
-/// - `H`: the [`BuildHasher` used to hash elements.
+/// - `H`: the [`BuildHasher`] used to hash elements.
 ///
 /// - `W`: the unsigned word type for the register backend (see below).
 ///
@@ -431,6 +435,7 @@ where
                 zeroes += 1;
             }
             // 2⁻ᵛ via IEEE 754: exponent = 1023 − v, zero mantissa.
+            debug_assert!(value <= 1023);
             harmonic_mean += f64::from_bits((1023 - value as u64) << 52);
         }
 
@@ -486,6 +491,19 @@ where
             &mut helper.mask,
             self.register_size,
         );
+    }
+}
+
+impl<T, H, W, const BETA: bool> std::fmt::Display for HyperLogLog<T, H, W, BETA> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "HyperLogLog with relative standard deviation: {}% ({} registers/estimator, {} bits/register, {} bytes/estimator)",
+            100.0 * HyperLogLog::rel_std(self.log2_num_regs),
+            self.num_regs,
+            self.register_size,
+            (self.num_regs * self.register_size) / 8
+        )
     }
 }
 
@@ -724,6 +742,13 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
         let num_elements = self.num_elements;
         let number_of_registers = 1 << log2_num_regs;
         let register_size = HyperLogLog::register_size(num_elements);
+        assert!(
+            register_size <= 6,
+            "register size {} (from num_elements = {}) exceeds the maximum of 6 supported with a {}-bit hash type",
+            register_size,
+            num_elements,
+            HashResult::BITS,
+        );
         let sentinel_mask = 1 << ((1 << register_size) - 2);
         let alpha = match log2_num_regs {
             4 => 0.673,
@@ -764,19 +789,6 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
             words_per_estimator: est_size_in_words,
             _marker: std::marker::PhantomData,
         }
-    }
-}
-
-impl<T, H, W, const BETA: bool> std::fmt::Display for HyperLogLog<T, H, W, BETA> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "HyperLogLog with relative standard deviation: {}% ({} registers/estimator, {} bits/register, {} bytes/estimator)",
-            100.0 * HyperLogLog::rel_std(self.log2_num_regs),
-            self.num_regs,
-            self.register_size,
-            (self.num_regs * self.register_size) / 8
-        )
     }
 }
 
