@@ -16,20 +16,6 @@ use std::{borrow::Borrow, f64::consts::LN_2};
 /// The type returned by the hash function.
 type HashResult = u64;
 
-/// Precomputed table of 2⁻*ⁿ* for *n* in [0 . . 128), used to replace
-/// [`powi`](f64::powi) calls in the estimate loop. Computed at compile time
-/// using the IEEE 754 representation: 2⁻*ⁿ* has exponent 1023 − *n* and zero
-/// mantissa.
-const NEG_POW2_TABLE: [f64; 129] = {
-    let mut table = [0.0f64; 129];
-    let mut i = 0u64;
-    while i < 129 {
-        table[i as usize] = f64::from_bits((1023 - i) << 52);
-        i += 1;
-    }
-    table
-};
-
 /// LogLog-β polynomial coefficients for `log2_num_regs` in [4 . . 18].
 ///
 /// Indexed as `LOGLOG_BETA[log2_num_regs - 4]`. Each row holds β₀, β₁, …,
@@ -436,10 +422,6 @@ where
     }
 
     fn estimate(&self, backend: &[W]) -> f64 {
-        const _: () = assert!(
-            size_of::<HashResult>() <= 16,
-            "NEG_POW2_TABLE has 129 entries, which is sufficient for hash types up to 128 bits"
-        );
         let mut harmonic_mean = 0.0;
         let mut zeroes = 0usize;
 
@@ -448,10 +430,8 @@ where
             if value == 0 {
                 zeroes += 1;
             }
-            harmonic_mean += NEG_POW2_TABLE
-                .get(value)
-                .copied()
-                .unwrap_or_else(|| 2.0f64.powi(-(value as i32)));
+            // 2⁻ᵛ via IEEE 754: exponent = 1023 − v, zero mantissa.
+            harmonic_mean += f64::from_bits((1023 - value as u64) << 52);
         }
 
         apply_correction::<BETA>(

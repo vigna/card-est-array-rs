@@ -8,7 +8,7 @@ use card_est_array::{
     impls::HyperLogLogBuilder,
     traits::{EstimationLogic, SliceEstimationLogic},
 };
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 
 /// Benchmarks `estimate` for HyperLogLog configured for 1B elements
 /// (register_size = 5) with varying numbers of registers, comparing
@@ -40,23 +40,13 @@ fn bench_estimate(c: &mut Criterion) {
             logic_classic.add(&mut backend_classic, i);
         }
 
-        group.bench_with_input(
-            BenchmarkId::new("beta", num_regs),
-            &num_regs,
-            |b, _| {
-                b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("beta", num_regs), &num_regs, |b, _| {
+            b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("classic", num_regs),
-            &num_regs,
-            |b, _| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("classic", num_regs), &num_regs, |b, _| {
+            b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
+        });
     }
 
     group.finish();
@@ -91,23 +81,13 @@ fn bench_estimate_low_cardinality(c: &mut Criterion) {
             logic_classic.add(&mut backend_classic, i);
         }
 
-        group.bench_with_input(
-            BenchmarkId::new("beta", num_regs),
-            &num_regs,
-            |b, _| {
-                b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("beta", num_regs), &num_regs, |b, _| {
+            b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
+        });
 
-        group.bench_with_input(
-            BenchmarkId::new("classic", num_regs),
-            &num_regs,
-            |b, _| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("classic", num_regs), &num_regs, |b, _| {
+            b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
+        });
     }
 
     group.finish();
