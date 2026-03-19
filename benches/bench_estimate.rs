@@ -22,7 +22,8 @@ fn bench_estimate(c: &mut Criterion) {
         // BETA = true (LogLog-β)
         let logic_beta = HyperLogLogBuilder::new(1_000_000_000)
             .log2_num_regs(log2_regs)
-            .build::<usize>().unwrap();
+            .build::<usize>()
+            .unwrap();
 
         let mut backend_beta = vec![0usize; logic_beta.backend_len()];
         for i in 0..1_000_000usize {
@@ -33,7 +34,8 @@ fn bench_estimate(c: &mut Criterion) {
         let logic_classic = HyperLogLogBuilder::new(1_000_000_000)
             .log2_num_regs(log2_regs)
             .beta::<false>()
-            .build::<usize>().unwrap();
+            .build::<usize>()
+            .unwrap();
 
         let mut backend_classic = vec![0usize; logic_classic.backend_len()];
         for i in 0..1_000_000usize {
@@ -64,7 +66,8 @@ fn bench_estimate_low_cardinality(c: &mut Criterion) {
 
         let logic_beta = HyperLogLogBuilder::new(1_000_000_000)
             .log2_num_regs(log2_regs)
-            .build::<usize>().unwrap();
+            .build::<usize>()
+            .unwrap();
 
         let mut backend_beta = vec![0usize; logic_beta.backend_len()];
         for i in 0..num_elements {
@@ -74,7 +77,8 @@ fn bench_estimate_low_cardinality(c: &mut Criterion) {
         let logic_classic = HyperLogLogBuilder::new(1_000_000_000)
             .log2_num_regs(log2_regs)
             .beta::<false>()
-            .build::<usize>().unwrap();
+            .build::<usize>()
+            .unwrap();
 
         let mut backend_classic = vec![0usize; logic_classic.backend_len()];
         for i in 0..num_elements {
