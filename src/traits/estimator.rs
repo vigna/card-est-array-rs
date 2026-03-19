@@ -32,7 +32,8 @@ use std::borrow::Borrow;
 /// configuration (i.e., precision) in a controlled way, and saving space by
 /// sharing common parameters. This is particularly useful to build [arrays of
 /// cardinality estimators](crate::traits::EstimatorArray), which are arrays of
-/// estimators sharing the same logic.
+/// estimators sharing the same logic, but the same technique can be applied
+/// to any kind of container (e.g., hash maps or sets of backends).
 ///
 /// If you plan to use a small number of non-related estimators, we suggest you
 /// [create](EstimationLogic::new_estimator) them and use their methods. More
