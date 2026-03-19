@@ -7,7 +7,9 @@
 
 use super::DefaultEstimator;
 use crate::traits::Word;
-use crate::traits::{EstimationLogic, MergeEstimationLogic, SliceEstimationLogic};
+use crate::traits::{
+    EstimationLogic, MergeEstimationLogic, SliceEstimationLogic, assert_backend_len,
+};
 use num_primitive::{PrimitiveNumber, PrimitiveNumberAs};
 use std::hash::*;
 use std::num::NonZeroUsize;
@@ -377,9 +379,20 @@ impl<T, H: Clone, W: Clone, const BETA: bool> Clone for HyperLogLog<T, H, W, BET
 }
 
 impl<T, H: Clone, W: Word, const BETA: bool> HyperLogLog<T, H, W, BETA> {
+    /// Returns the base-2 logarithm of the number of registers per estimator.
+    pub fn log2_num_regs(&self) -> usize {
+        self.log2_num_regs
+    }
+
     /// Returns the value contained in a register of a given backend.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `index` is less than the [number of
+    /// registers per estimator](Self::log2_num_regs), and that `backend` has
+    /// length at least [`SliceEstimationLogic::backend_len`].
     #[inline(always)]
-    fn get_register_unchecked(&self, backend: impl AsRef<[W]>, index: usize) -> W {
+    unsafe fn get_register_unchecked(&self, backend: impl AsRef<[W]>, index: usize) -> W {
         let backend = backend.as_ref();
         let bits = W::BITS as usize;
         let bit_width = self.register_size;
@@ -398,8 +411,19 @@ impl<T, H: Clone, W: Word, const BETA: bool> HyperLogLog<T, H, W, BETA> {
     }
 
     /// Sets the value contained in a register of a given backend.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `index` is less than the [number of
+    /// registers per estimator](Self::log2_num_regs), and that `backend` has
+    /// length at least [`SliceEstimationLogic::backend_len`].
     #[inline(always)]
-    fn set_register_unchecked(&self, mut backend: impl AsMut<[W]>, index: usize, new_value: W) {
+    unsafe fn set_register_unchecked(
+        &self,
+        mut backend: impl AsMut<[W]>,
+        index: usize,
+        new_value: W,
+    ) {
         let backend = backend.as_mut();
         let bits = W::BITS as usize;
         let bit_width = self.register_size;
@@ -460,6 +484,7 @@ where
     }
 
     fn add(&self, backend: &mut Self::Backend, element: impl Borrow<T>) {
+        assert_backend_len!(self, backend);
         let hash = self.build_hasher.hash_one(element.borrow());
         let register = (hash & self.num_regs_minus_1) as usize;
         // The number of trailing zeroes is certainly expressible in
@@ -471,20 +496,21 @@ where
         debug_assert!(r < (W::ONE << self.register_size) - W::ONE);
         debug_assert!(register < self.num_regs);
 
-        let current_value = self.get_register_unchecked(&*backend, register);
+        let current_value = unsafe { self.get_register_unchecked(&*backend, register) };
         let candidate_value = r + W::ONE;
         let new_value = std::cmp::max(current_value, candidate_value);
         if current_value != new_value {
-            self.set_register_unchecked(backend, register, new_value);
+            unsafe { self.set_register_unchecked(backend, register, new_value) };
         }
     }
 
     fn estimate(&self, backend: &[W]) -> f64 {
+        assert_backend_len!(self, backend);
         let mut harmonic_mean = 0.0;
         let mut zeroes = 0usize;
 
         for i in 0..self.num_regs {
-            let value: usize = self.get_register_unchecked(backend, i).as_to();
+            let value: usize = unsafe { self.get_register_unchecked(backend, i).as_to() };
             if value == 0 {
                 zeroes += 1;
             }
@@ -627,7 +653,7 @@ impl HyperLogLog<(), (), (), true> {
     /// # Arguments
     /// * `rsd`: the relative standard deviation to be attained.
     pub fn log2_num_of_registers(rsd: f64) -> usize {
-        ((1.106 / rsd).powi(2)).log2().ceil() as usize
+        (((1.106 / rsd).powi(2)).log2().ceil() as usize).max(4)
     }
 
     /// Returns the relative standard deviation corresponding to a given number

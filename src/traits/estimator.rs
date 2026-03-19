@@ -106,6 +106,22 @@ pub trait SliceEstimationLogic<T>: EstimationLogic<Backend = [T]> {
     fn backend_len(&self) -> usize;
 }
 
+/// Asserts that a backend slice has the expected length for the given
+/// [`SliceEstimationLogic`].
+macro_rules! assert_backend_len {
+    ($logic:expr, $backend:expr) => {
+        assert_eq!(
+            $backend.len(),
+            $logic.backend_len(),
+            "backend length ({}) does not match the expected length ({})",
+            $backend.len(),
+            $logic.backend_len()
+        )
+    };
+}
+
+pub(crate) use assert_backend_len;
+
 /// An immutable estimator.
 ///
 /// Immutable estimators are usually immutable views over some larger structure,

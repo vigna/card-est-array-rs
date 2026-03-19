@@ -1,5 +1,18 @@
 # Change Log
 
+## [0.6.0] - 2026-03-20
+
+### Fixed
+
+- `HyperLogLog::get_register_unchecked` and
+  `HyperLogLog::set_register_unchecked` are now `unsafe`.
+
+- `HyperLogLog::add` and `HyperLogLog::estimate` now check the length of the
+  backend.
+
+- `HyperLogLogBuilder::rsd` can no longer set the `log2_num_reg` parameter to
+  values smaller than 4.
+
 ## [0.5.0] - 2026-03-19
 
 ### Improved
