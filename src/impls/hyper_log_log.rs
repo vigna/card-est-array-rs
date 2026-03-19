@@ -11,7 +11,61 @@ use crate::traits::{EstimationLogic, MergeEstimationLogic, SliceEstimationLogic}
 use num_primitive::{PrimitiveNumber, PrimitiveNumberAs};
 use std::hash::*;
 use std::num::NonZeroUsize;
-use std::{borrow::Borrow, f64::consts::LN_2};
+use std::{borrow::Borrow, f64::consts::LN_2, fmt};
+
+/// Error returned by [`HyperLogLogBuilder::build`] when the configuration is
+/// invalid.
+#[derive(Debug, Clone)]
+pub enum HyperLogLogError {
+    /// The register size derived from `num_elements` exceeds the maximum
+    /// supported by the hash type.
+    RegisterSizeTooLarge {
+        register_size: usize,
+        num_elements: usize,
+        hash_bits: u32,
+    },
+    /// The estimator size in bits is not divisible by the bit width of the
+    /// backend word type `W`, so registers cannot be packed exactly into whole
+    /// words.
+    UnalignedBackend {
+        est_size_in_bits: usize,
+        word_bits: usize,
+        min_alignment: String,
+        min_log2_num_regs: usize,
+    },
+}
+
+impl fmt::Display for HyperLogLogError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::RegisterSizeTooLarge {
+                register_size,
+                num_elements,
+                hash_bits,
+            } => write!(
+                f,
+                "register size {} (derived from num_elements = {}) exceeds the maximum of 6 \
+                supported with a {}-bit hash type; reduce num_elements or use a hash with more bits",
+                register_size, num_elements, hash_bits,
+            ),
+            Self::UnalignedBackend {
+                est_size_in_bits,
+                word_bits,
+                min_alignment,
+                min_log2_num_regs,
+            } => write!(
+                f,
+                "estimator size ({} bits) is not divisible by the word size ({} bits), \
+                so register backends cannot be aligned; use {} or a smaller unsigned integer type \
+                as the word type, or increase log2_num_regs (possibly by reducing \
+                the relative standard deviation) to at least {}",
+                est_size_in_bits, word_bits, min_alignment, min_log2_num_regs,
+            ),
+        }
+    }
+}
+
+impl std::error::Error for HyperLogLogError {}
 
 /// The type returned by the hash function.
 type HashResult = u64;
@@ -248,13 +302,13 @@ fn apply_correction<const BETA: bool>(
 /// // Default: LogLog-β correction enabled, usize backend
 /// let logic = HyperLogLogBuilder::new(1_000_000)
 ///     .log2_num_regs(8)
-///     .build::<String>();
+///     .build::<String>().unwrap();
 ///
 /// // Disable LogLog-β, use classic HLL + linear-counting fallback
 /// let logic = HyperLogLogBuilder::new(1_000_000)
 ///     .log2_num_regs(8)
 ///     .beta::<false>()
-///     .build::<String>();
+///     .build::<String>().unwrap();
 /// ```
 ///
 /// # Type parameters
@@ -690,7 +744,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// let logic = HyperLogLogBuilder::new(1_000_000)
     ///     .log2_num_regs(8)
     ///     .beta::<false>()
-    ///     .build::<usize>();
+    ///     .build::<usize>().unwrap();
     /// ```
     pub fn beta<const BETA2: bool>(self) -> HyperLogLogBuilder<H, W, BETA2> {
         HyperLogLogBuilder {
@@ -733,22 +787,27 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// The type of objects the estimators keep track of is defined here by `T`,
     /// but it is usually inferred by the compiler.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// If the estimator size in bits is not divisible by the bit width of `W`.
-    pub fn build<T>(self) -> HyperLogLog<T, H, W, BETA> {
+    /// Returns [`HyperLogLogError::RegisterSizeTooLarge`] if the register size
+    /// derived from `num_elements` exceeds the maximum supported by the hash
+    /// type.
+    ///
+    /// Returns [`HyperLogLogError::UnalignedBackend`] if the estimator size in
+    /// bits is not divisible by the bit width of `W`.
+    pub fn build<T>(self) -> Result<HyperLogLog<T, H, W, BETA>, HyperLogLogError> {
         let bits = W::BITS as usize;
         let log2_num_regs = self.log2_num_regs;
         let num_elements = self.num_elements;
         let number_of_registers = 1 << log2_num_regs;
         let register_size = HyperLogLog::register_size(num_elements);
-        assert!(
-            register_size <= 6,
-            "register size {} (from num_elements = {}) exceeds the maximum of 6 supported with a {}-bit hash type",
-            register_size,
-            num_elements,
-            HashResult::BITS,
-        );
+        if register_size > 6 {
+            return Err(HyperLogLogError::RegisterSizeTooLarge {
+                register_size,
+                num_elements,
+                hash_bits: HashResult::BITS,
+            });
+        }
         let sentinel_mask = 1 << ((1 << register_size) - 2);
         let alpha = match log2_num_regs {
             4 => 0.673,
@@ -761,12 +820,14 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
         let est_size_in_bits = number_of_registers * register_size;
 
         // This ensures estimators are always aligned to W
-        assert!(
-            est_size_in_bits % bits == 0,
-            "W should allow estimator backends to be aligned. Use {} or smaller unsigned integer types; or increase log2_num_regs to be >= {}",
-            min_alignment(est_size_in_bits),
-            self.min_log2_num_regs(),
-        );
+        if est_size_in_bits % bits != 0 {
+            return Err(HyperLogLogError::UnalignedBackend {
+                est_size_in_bits,
+                word_bits: bits,
+                min_alignment: min_alignment(est_size_in_bits),
+                min_log2_num_regs: self.min_log2_num_regs(),
+            });
+        }
         let est_size_in_words = est_size_in_bits / bits;
 
         let msb_mask = build_register_mask(
@@ -776,7 +837,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
         );
         let lsb_mask = build_register_mask(est_size_in_words, register_size, W::ONE);
 
-        HyperLogLog {
+        Ok(HyperLogLog {
             num_regs: number_of_registers,
             num_regs_minus_1,
             log2_num_regs,
@@ -788,7 +849,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
             lsb_mask,
             words_per_estimator: est_size_in_words,
             _marker: std::marker::PhantomData,
-        }
+        })
     }
 }
 

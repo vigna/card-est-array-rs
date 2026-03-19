@@ -34,22 +34,25 @@ fn test_min_log2_num_regs() {
             let builder = HyperLogLogBuilder::new(size).word_type::<W>();
             let min_log2m = builder.min_log2_num_regs();
 
-            let result =
-                std::panic::catch_unwind(|| builder.clone().log2_num_regs(min_log2m).build::<()>());
+            let result = builder.clone().log2_num_regs(min_log2m).build::<()>();
             assert!(
                 result.is_ok(),
                 "size={size} with W={} gives min_log2m={min_log2m}, which is not valid",
                 std::any::type_name::<W>()
             );
 
-            let result =
-                std::panic::catch_unwind(|| builder.log2_num_regs(min_log2m - 1).build::<()>());
-            assert!(
-                result.is_err(),
-                "size={size} with W={} gives min_log2m={min_log2m}, but log2m={} is valid too",
-                std::any::type_name::<W>(),
-                min_log2m - 1,
-            );
+            // When min_log2m is already 4 (the absolute minimum enforced by
+            // log2_num_regs), we cannot test a lower value without triggering
+            // the precondition panic in log2_num_regs itself.
+            if min_log2m > 4 {
+                let result = builder.log2_num_regs(min_log2m - 1).build::<()>();
+                assert!(
+                    result.is_err(),
+                    "size={size} with W={} gives min_log2m={min_log2m}, but log2m={} is valid too",
+                    std::any::type_name::<W>(),
+                    min_log2m - 1,
+                );
+            }
         }
     }
 
@@ -75,7 +78,8 @@ fn do_test_single<const BETA: bool>() {
                     .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
-                    .build();
+                    .build()
+                    .unwrap();
                 let mut est = logic.new_estimator();
                 let incr = (1 << 32) / size as i64;
                 let mut x = i64::MIN;
@@ -126,7 +130,8 @@ fn do_test_double<const BETA: bool>() {
                     .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
-                    .build();
+                    .build()
+                    .unwrap();
                 let mut est_0 = logic.new_estimator();
                 let mut est_1 = logic.new_estimator();
                 let incr = (1 << 32) / size as i64;
@@ -191,7 +196,8 @@ fn do_test_merge<const BETA: bool>() {
                     .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
-                    .build();
+                    .build()
+                    .unwrap();
                 let mut est_0 = logic.new_estimator();
                 let mut est_1 = logic.new_estimator();
                 let incr = (1 << 32) / (size * 2) as i64;
@@ -259,7 +265,8 @@ fn do_test_merge_array<const BETA: bool>() {
                     .log2_num_regs(log2m)
                     .build_hasher(Xxh3Builder::new().with_seed(trial))
                     .beta::<BETA>()
-                    .build();
+                    .build()
+                    .unwrap();
                 let mut estimators = SliceEstimatorArray::new(logic, 2);
                 let incr = (1 << 32) / (size * 2) as i64;
                 let mut x = i64::MIN;
