@@ -44,9 +44,7 @@ fn bench_estimate(c: &mut Criterion) {
                 b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
             });
             group.bench_function(BenchmarkId::new("hll-5bit/classic", num_regs), |b| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
+                b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
             });
         }
 
@@ -75,9 +73,7 @@ fn bench_estimate(c: &mut Criterion) {
                 b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
             });
             group.bench_function(BenchmarkId::new("hll-6bit/classic", num_regs), |b| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
+                b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
             });
         }
 
@@ -104,9 +100,7 @@ fn bench_estimate(c: &mut Criterion) {
                 b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
             });
             group.bench_function(BenchmarkId::new("hll-byte/classic", num_regs), |b| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
+                b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
             });
         }
     }
@@ -149,9 +143,7 @@ fn bench_estimate_low_cardinality(c: &mut Criterion) {
                 b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
             });
             group.bench_function(BenchmarkId::new("hll-5bit/classic", num_regs), |b| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
+                b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
             });
         }
 
@@ -180,9 +172,7 @@ fn bench_estimate_low_cardinality(c: &mut Criterion) {
                 b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
             });
             group.bench_function(BenchmarkId::new("hll-6bit/classic", num_regs), |b| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
+                b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
             });
         }
 
@@ -209,9 +199,7 @@ fn bench_estimate_low_cardinality(c: &mut Criterion) {
                 b.iter(|| black_box(logic_beta.estimate(black_box(backend_beta.as_slice()))));
             });
             group.bench_function(BenchmarkId::new("hll-byte/classic", num_regs), |b| {
-                b.iter(|| {
-                    black_box(logic_classic.estimate(black_box(backend_classic.as_slice())))
-                });
+                b.iter(|| black_box(logic_classic.estimate(black_box(backend_classic.as_slice()))));
             });
         }
     }
