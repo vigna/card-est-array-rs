@@ -270,7 +270,7 @@ pub fn beta_horner(z: f64, precision: usize) -> f64 {
 /// `BETA=true` and `BETA=false`, preventing the post-loop formula from
 /// influencing loop optimizations (vectorization, unrolling, scheduling).
 #[inline(never)]
-fn apply_correction<const BETA: bool>(
+pub(crate) fn apply_correction<const BETA: bool>(
     harmonic_mean: f64,
     zeroes: usize,
     num_regs: usize,
@@ -295,8 +295,19 @@ fn apply_correction<const BETA: bool>(
     }
 }
 
-/// Estimator logic implementing the HyperLogLog algorithm.
+/// Estimation logic implementing the HyperLogLog algorithm.
 ///
+/// This implementation use 5 to 6 bits registers and broadword programming (the
+/// 4-bit case is possible but irrelevant). It thus uses the minimum possible
+/// space, saving 37.5 to 25% space with respect to the [`HyperLogLog8`] logic,
+/// which uses 8-bit registers and byte-wise SIMD operations, but it is
+/// significantly slower than the latter.
+///
+/// The choice between the two logics should be guided by the specific use case
+/// and constraints of your application. Please try the included benchmarks to
+/// have an idea of the difference in performance between the two logics in your
+/// environment.
+
 /// Instances are created through [`HyperLogLogBuilder`]:
 ///
 /// ```
@@ -587,7 +598,7 @@ impl<T, H, W, const BETA: bool> std::fmt::Display for HyperLogLog<T, H, W, BETA>
     }
 }
 
-/// Builder for [`HyperLogLog`] cardinality-estimator logic.
+/// Builder for [`HyperLogLog`] cardinality-estimation logic.
 ///
 /// The builder lets you configure:
 /// - the upper bound on the number of distinct elements

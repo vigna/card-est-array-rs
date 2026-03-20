@@ -19,7 +19,7 @@ impl<L: EstimationLogic, BL: Borrow<L>, B> DefaultEstimator<L, BL, B> {
     /// Creates a new default estimator for the specified logic and backend.
     ///
     /// # Arguments
-    /// * `logic`: the estimator logic.
+    /// * `logic`: the estimation logic.
     /// * `backend`: the estimator's backend.
     pub const fn new(logic: BL, backend: B) -> Self {
         Self {

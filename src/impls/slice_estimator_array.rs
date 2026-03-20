@@ -113,7 +113,7 @@ impl<L: SliceEstimationLogic<W>, W: Word> SliceEstimatorArray<L, W, Box<[W]>> {
     /// Creates a new estimator slice with the provided logic.
     ///
     /// # Arguments
-    /// * `logic`: the estimator logic to use.
+    /// * `logic`: the estimation logic to use.
     /// * `len`: the number of the estimators in the array.
     pub fn new(logic: L, len: usize) -> Self {
         let num_backend_len = logic.backend_len();

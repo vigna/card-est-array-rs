@@ -2,6 +2,11 @@
 
 ## [0.6.0] - 2026-03-20
 
+### New
+
+- New `HyperLogLog8` estimation logic with byte-sized register uses
+  33 to 60% extra space but is an order of magnitude faster.
+
 ### Fixed
 
 - `HyperLogLog::get_register_unchecked` and

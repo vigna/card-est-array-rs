@@ -25,6 +25,18 @@ sync-cell-slice = "0.9.12"
 criterion = { version = "0.5", features = ["html_reports"] }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
 
+[profile.bench]
+opt-level = 3            # like --release
+lto = "fat"              # Full LTO
+overflow-checks = false  # Disable integer overflow checks.
+debug = true             # Include debug info.
+debug-assertions = false # Disable debug assertions.
+codegen-units = 1        # slower compile times, but maybe better perf
+
 [[bench]]
 name = "bench_estimate"
+harness = false
+
+[[bench]]
+name = "bench_add_merge"
 harness = false
