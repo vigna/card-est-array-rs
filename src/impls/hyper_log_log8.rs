@@ -117,9 +117,7 @@ impl<T: Hash, H: BuildHasher + Clone, const BETA: bool> EstimationLogic
         assert_backend_len!(self, backend);
         let hash = self.build_hasher.hash_one(element.borrow());
         let register = (hash & self.num_regs_minus_1) as usize;
-        let r = hash
-            .rotate_right(self.log2_num_regs)
-            .trailing_zeros();
+        let r = hash.rotate_right(self.log2_num_regs).trailing_zeros();
 
         debug_assert!(register < self.num_regs);
 
