@@ -101,11 +101,7 @@ fn bench_merge(c: &mut Criterion) {
             let mut helper = hll.new_helper();
             group.bench_function(BenchmarkId::new("hll-5bit", num_regs), |b| {
                 b.iter(|| {
-                    hll.merge_with_helper(
-                        black_box(&mut dst),
-                        black_box(&src),
-                        &mut helper,
-                    );
+                    hll.merge_with_helper(black_box(&mut dst), black_box(&src), &mut helper);
                 });
             });
         }
@@ -125,11 +121,7 @@ fn bench_merge(c: &mut Criterion) {
             let mut helper = hll.new_helper();
             group.bench_function(BenchmarkId::new("hll-6bit", num_regs), |b| {
                 b.iter(|| {
-                    hll.merge_with_helper(
-                        black_box(&mut dst),
-                        black_box(&src),
-                        &mut helper,
-                    );
+                    hll.merge_with_helper(black_box(&mut dst), black_box(&src), &mut helper);
                 });
             });
         }
