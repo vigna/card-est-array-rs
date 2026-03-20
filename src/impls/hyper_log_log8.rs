@@ -17,7 +17,8 @@ use std::{fmt, marker::PhantomData};
 /// registers.
 ///
 /// This implementation uses a full byte for each register instead of packed 5–6
-/// bit registers. This approach trades 33 to 50% extra space with respect to
+/// bit registers. This approach trades 60% (for 5-bits registers) or 33.3% (for
+/// 6-bits registers) extra space with respect to
 /// [`HyperLogLog`](super::HyperLogLog) for:
 ///
 /// - fast register access (byte indexing instead of bit-field extraction);
@@ -60,7 +61,7 @@ use std::{fmt, marker::PhantomData};
 pub struct HyperLogLog8<T, H, const BETA: bool = true> {
     build_hasher: H,
     num_regs_minus_1: u64,
-    log2_num_regs: usize,
+    log2_num_regs: u32,
     num_regs: usize,
     alpha_m_m: f64,
     _marker: PhantomData<T>,
@@ -83,7 +84,7 @@ impl<T, H: Clone, const BETA: bool> Clone for HyperLogLog8<T, H, BETA> {
 
 impl<T, H: Clone, const BETA: bool> HyperLogLog8<T, H, BETA> {
     /// Returns the base-2 logarithm of the number of registers per estimator.
-    pub fn log2_num_regs(&self) -> usize {
+    pub fn log2_num_regs(&self) -> u32 {
         self.log2_num_regs
     }
 }
@@ -117,7 +118,7 @@ impl<T: Hash, H: BuildHasher + Clone, const BETA: bool> EstimationLogic
         let hash = self.build_hasher.hash_one(element.borrow());
         let register = (hash & self.num_regs_minus_1) as usize;
         let r = hash
-            .rotate_right(self.log2_num_regs as u32)
+            .rotate_right(self.log2_num_regs)
             .trailing_zeros();
 
         debug_assert!(register < self.num_regs);
@@ -130,7 +131,7 @@ impl<T: Hash, H: BuildHasher + Clone, const BETA: bool> EstimationLogic
         let mut harmonic_mean = 0.0;
         let mut zeroes = 0usize;
 
-        for &value in backend.iter() {
+        for &value in backend {
             if value == 0 {
                 zeroes += 1;
             }
@@ -200,7 +201,7 @@ impl<T, H, const BETA: bool> fmt::Display for HyperLogLog8<T, H, BETA> {
 #[derive(Debug, Clone)]
 pub struct HyperLogLog8Builder<H, const BETA: bool = true> {
     build_hasher: H,
-    log2_num_regs: usize,
+    log2_num_regs: u32,
 }
 
 impl HyperLogLog8Builder<BuildHasherDefault<DefaultHasher>> {
@@ -248,7 +249,7 @@ impl<H, const BETA: bool> HyperLogLog8Builder<H, BETA> {
     /// # Panics
     ///
     /// If `log2_num_regs` is less than 4.
-    pub const fn log2_num_regs(mut self, log2_num_regs: usize) -> Self {
+    pub const fn log2_num_regs(mut self, log2_num_regs: u32) -> Self {
         assert!(
             log2_num_regs >= 4,
             "the logarithm of the number of registers per estimator should be at least 4"

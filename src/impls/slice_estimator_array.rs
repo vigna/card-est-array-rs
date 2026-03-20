@@ -110,7 +110,7 @@ impl<L, W, S: AsMut<[W]>> AsMut<[W]> for SliceEstimatorArray<L, W, S> {
 }
 
 impl<L: SliceEstimationLogic<W>, W: Word> SliceEstimatorArray<L, W, Box<[W]>> {
-    /// Creates a new estimator slice with the provided logic.
+    /// Creates a new estimator array with the provided logic.
     ///
     /// # Arguments
     /// * `logic`: the estimation logic to use.

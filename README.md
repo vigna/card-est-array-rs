@@ -48,7 +48,7 @@ to compute the [degrees of separation of Facebook].
 
 The purpose of this crate is to lay the foundation of the infrastructure that is
 necessary to implement HyperBall in the [Rust port of the WebGraph framework].
-We provide implementation of cardinality estimators and structures handling
+We provide implementations of cardinality estimators and structures handling
 large arrays of estimators sharing the same parameters and logic with minimal
 memory overhead. Sharing parameters is essential for scaling to billions of
 estimators, and this is why a separate structure for arrays of estimators is
@@ -67,8 +67,9 @@ hash maps or sets of backends).
 
 ## Provided estimators
 
-We provide two implementations of HyperLogLog counters (with optional
-[LogLog-β correction]). The provide a [`EstimationLogic`]s that can be used to manage arrays of estimators.
+We provide two implementations of HyperLogLog counters (with optional [LogLog-β
+correction]). They provide [`EstimationLogic`] implementations that can be used
+to manage arrays of estimators.
 
 - [`HyperLogLog`] is a compact, bit-based implementation;
 - [`HyperLogLog8`] is a faster byte-based implementation.
@@ -94,5 +95,5 @@ Union nor the Italian MUR can be held responsible for them.
 [`EstimationLogic`]: https://docs.rs/card-est-array/latest/card_est_array/traits/trait.EstimationLogic.html
 [`HyperLogLog`]: https://docs.rs/card-est-array/latest/card_est_array/impls/hyper_log_log/struct.HyperLogLog.html
 [`HyperLogLog8`]: https://docs.rs/card-est-array/latest/card_est_array/impls/hyper_log_log8/struct.HyperLogLog8.html
-[LogLog-β correction]: https://docs.rs/card_est_array/latest/impls/hyper_log_log/fn.beta_horner.html
+[LogLog-β correction]: https://docs.rs/card_est_array/latest/card_est_array/hyper_log_log/fn.beta_horner.html
 [Rust port of the WebGraph framework]: https://crates.io/crates/webgraph

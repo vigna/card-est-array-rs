@@ -33,7 +33,7 @@ pub enum HyperLogLogError {
         est_size_in_bits: usize,
         word_bits: usize,
         min_alignment: String,
-        min_log2_num_regs: usize,
+        min_log2_num_regs: u32,
     },
 }
 
@@ -252,9 +252,9 @@ const LOGLOG_BETA: [[f64; 8]; 15] = [
 ///
 /// # Panics
 ///
-/// If `precision` is not in [4 . . 18].
-pub fn beta_horner(z: f64, precision: usize) -> f64 {
-    let beta = LOGLOG_BETA[precision - 4];
+/// If `log2_num_regs` is not in [4 . . 18].
+pub fn beta_horner(z: f64, log2_num_regs: usize) -> f64 {
+    let beta = LOGLOG_BETA[log2_num_regs - 4];
     let zl = (z + 1.0).ln();
     let mut res = 0.0;
     for i in (1..8).rev() {
@@ -274,7 +274,7 @@ pub(crate) fn apply_correction<const BETA: bool>(
     harmonic_mean: f64,
     zeroes: usize,
     num_regs: usize,
-    log2_num_regs: usize,
+    log2_num_regs: u32,
     alpha_m_m: f64,
 ) -> f64 {
     if BETA && zeroes != 0 && log2_num_regs <= 18 {
@@ -282,7 +282,7 @@ pub(crate) fn apply_correction<const BETA: bool>(
         // estimate and the linear-counting small-range correction.
         let m = num_regs as f64;
         let z = zeroes as f64;
-        let beta = beta_horner(z, log2_num_regs);
+        let beta = beta_horner(z, log2_num_regs as usize);
         alpha_m_m * (m - z) / (m * (harmonic_mean + beta))
     } else {
         // Classic HyperLogLog raw estimate with linear-counting correction.
@@ -297,10 +297,9 @@ pub(crate) fn apply_correction<const BETA: bool>(
 
 /// Estimation logic implementing the HyperLogLog algorithm.
 ///
-/// This implementation use 5 to 6 bits registers and [broadword
-/// programming](https://doi.org/10.1145/1963405.1963493) (the 4-bit case is
-/// possible but irrelevant). It thus uses the minimum possible space, saving
-/// 37.5 to 25% space with respect to the
+/// This implementation use 5 or 6 bits registers and [broadword
+/// programming](https://doi.org/10.1145/1963405.1963493). It thus uses the
+/// minimum possible space, saving 37.5 or 25% space with respect to the
 /// [`HyperLogLog8`](crate::impls::HyperLogLog8) logic, which uses 8-bit
 /// registers and byte-wise SIMD operations, but it is significantly slower than
 /// the latter.
@@ -319,7 +318,7 @@ pub(crate) fn apply_correction<const BETA: bool>(
 ///     .log2_num_regs(8)
 ///     .build::<String>().unwrap();
 ///
-/// // Disable LogLog-β, use classic HLL + linear-counting fallback
+/// // Disable LogLog-β, use classic HyperLogLog + linear-counting fallback
 /// let logic = HyperLogLogBuilder::new(1_000_000)
 ///     .log2_num_regs(8)
 ///     .beta::<false>()
@@ -361,7 +360,7 @@ pub struct HyperLogLog<T, H, W = usize, const BETA: bool = true> {
     build_hasher: H,
     register_size: usize,
     num_regs_minus_1: HashResult,
-    log2_num_regs: usize,
+    log2_num_regs: u32,
     sentinel_mask: HashResult,
     num_regs: usize,
     pub(super) words_per_estimator: usize,
@@ -393,7 +392,7 @@ impl<T, H: Clone, W: Clone, const BETA: bool> Clone for HyperLogLog<T, H, W, BET
 
 impl<T, H: Clone, W: Word, const BETA: bool> HyperLogLog<T, H, W, BETA> {
     /// Returns the base-2 logarithm of the number of registers per estimator.
-    pub fn log2_num_regs(&self) -> usize {
+    pub fn log2_num_regs(&self) -> u32 {
         self.log2_num_regs
     }
 
@@ -618,7 +617,7 @@ impl<T, H, W, const BETA: bool> std::fmt::Display for HyperLogLog<T, H, W, BETA>
 #[derive(Debug, Clone)]
 pub struct HyperLogLogBuilder<H, W = usize, const BETA: bool = true> {
     build_hasher: H,
-    log2_num_regs: usize,
+    log2_num_regs: u32,
     num_elements: usize,
     _marker: std::marker::PhantomData<W>,
 }
@@ -629,7 +628,7 @@ impl HyperLogLogBuilder<BuildHasherDefault<DefaultHasher>> {
     ///
     /// # Panics
     ///
-    /// If `n` is zero.
+    /// If `num_elements` is zero.
     pub const fn new(num_elements: usize) -> Self {
         assert!(
             num_elements > 0,
@@ -665,8 +664,8 @@ impl HyperLogLog<(), (), (), true> {
     ///
     /// # Arguments
     /// * `rsd`: the relative standard deviation to be attained.
-    pub fn log2_num_of_registers(rsd: f64) -> usize {
-        (((1.106 / rsd).powi(2)).log2().ceil() as usize).max(4)
+    pub fn log2_num_of_registers(rsd: f64) -> u32 {
+        (((1.106 / rsd).powi(2)).log2().ceil() as u32).max(4)
     }
 
     /// Returns the relative standard deviation corresponding to a given number
@@ -676,7 +675,7 @@ impl HyperLogLog<(), (), (), true> {
     ///
     /// * `log2_num_regs`: the logarithm of the number of registers per
     ///   estimator.
-    pub fn rel_std(log2_num_regs: usize) -> f64 {
+    pub fn rel_std(log2_num_regs: u32) -> f64 {
         let tmp = match log2_num_regs {
             4 => 1.106,
             5 => 1.070,
@@ -729,7 +728,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// # Panics
     ///
     /// If `log2_num_regs` is less than 4.
-    pub const fn log2_num_regs(mut self, log2_num_regs: usize) -> Self {
+    pub const fn log2_num_regs(mut self, log2_num_regs: u32) -> Self {
         assert!(
             log2_num_regs >= 4,
             "the logarithm of the number of registers per estimator should be at least 4"
@@ -740,12 +739,12 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
 
     /// Returns the minimum value allowed for [`Self::log2_num_regs`] given the
     /// current value of [`Self::num_elements`].
-    pub fn min_log2_num_regs(&self) -> usize {
+    pub fn min_log2_num_regs(&self) -> u32 {
         let register_size = HyperLogLog::register_size(self.num_elements);
         let register_size = NonZeroUsize::try_from(register_size).expect("register_size is zero");
         let min_num_regs = W::BITS / highest_power_of_2_dividing(register_size);
         assert_eq!(min_num_regs, min_num_regs.next_power_of_two());
-        min_num_regs.trailing_zeros() as usize // log2(min_num_regs)
+        min_num_regs.trailing_zeros() // log2(min_num_regs)
     }
 
     /// Sets the type `W` to use to represent backends.
@@ -768,7 +767,7 @@ impl<H, W: Word, const BETA: bool> HyperLogLogBuilder<H, W, BETA> {
     /// the estimate.
     ///
     /// When enabled (the default), the estimate uses the LogLog-β formula for
-    /// precisions 4–18, which provides better accuracy across the full
+    /// `log_num_regs` 4–18, which provides better accuracy across the full
     /// cardinality range without a separate linear-counting correction, at the
     /// cost of roughly 20ns per estimate call when some registers are still
     /// zero. When all registers are populated, the correction is skipped and
