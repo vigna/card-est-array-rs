@@ -72,6 +72,14 @@ pub trait EstimationLogic {
 /// given two estimators, returns an estimator with the same state
 /// one would obtain by adding to an empty estimator all the elements
 /// added to the two estimators, computing, in practice, a set union.
+///
+/// Since often merging requires additional allocation (usually, to hold
+/// temporary results sized like a backend), this trait provides two methods:
+/// [`merge`](MergeEstimationLogic::merge) and
+/// [`merge_with_helper`](MergeEstimationLogic::merge_with_helper). The first
+/// one is simpler to use, but it might cause excessive allocation if used
+/// repeatedly. The second one requires a helper to be provided, but it allows
+/// to reuse the helper for several merge operations.
 pub trait MergeEstimationLogic: EstimationLogic {
     /// The type of the helper used in merge calculations.
     ///
