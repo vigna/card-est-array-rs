@@ -297,17 +297,19 @@ pub(crate) fn apply_correction<const BETA: bool>(
 
 /// Estimation logic implementing the HyperLogLog algorithm.
 ///
-/// This implementation use 5 to 6 bits registers and broadword programming (the
-/// 4-bit case is possible but irrelevant). It thus uses the minimum possible
-/// space, saving 37.5 to 25% space with respect to the [`HyperLogLog8`] logic,
-/// which uses 8-bit registers and byte-wise SIMD operations, but it is
-/// significantly slower than the latter.
+/// This implementation use 5 to 6 bits registers and [broadword
+/// programming](https://doi.org/10.1145/1963405.1963493) (the 4-bit case is
+/// possible but irrelevant). It thus uses the minimum possible space, saving
+/// 37.5 to 25% space with respect to the
+/// [`HyperLogLog8`](crate::impls::HyperLogLog8) logic, which uses 8-bit
+/// registers and byte-wise SIMD operations, but it is significantly slower than
+/// the latter.
 ///
 /// The choice between the two logics should be guided by the specific use case
 /// and constraints of your application. Please try the included benchmarks to
 /// have an idea of the difference in performance between the two logics in your
 /// environment.
-
+///
 /// Instances are created through [`HyperLogLogBuilder`]:
 ///
 /// ```
