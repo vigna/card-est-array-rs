@@ -29,7 +29,7 @@ fn bench_add(c: &mut Criterion) {
                 hll.add(&mut backend, i);
             }
             let mut i = 10_000usize;
-            group.bench_function(BenchmarkId::new("hll5", num_regs), |b| {
+            group.bench_function(BenchmarkId::new("hll-5bit", num_regs), |b| {
                 b.iter(|| {
                     i = i.wrapping_add(1);
                     hll.add(black_box(&mut backend), black_box(i));
@@ -48,7 +48,7 @@ fn bench_add(c: &mut Criterion) {
                 hll.add(&mut backend, i);
             }
             let mut i = 10_000usize;
-            group.bench_function(BenchmarkId::new("hll6", num_regs), |b| {
+            group.bench_function(BenchmarkId::new("hll-6bit", num_regs), |b| {
                 b.iter(|| {
                     i = i.wrapping_add(1);
                     hll.add(black_box(&mut backend), black_box(i));
@@ -66,7 +66,7 @@ fn bench_add(c: &mut Criterion) {
                 hll8.add(&mut backend, i);
             }
             let mut i = 10_000usize;
-            group.bench_function(BenchmarkId::new("hll8", num_regs), |b| {
+            group.bench_function(BenchmarkId::new("hll-byte", num_regs), |b| {
                 b.iter(|| {
                     i = i.wrapping_add(1);
                     hll8.add(black_box(&mut backend), black_box(i));
@@ -99,7 +99,7 @@ fn bench_merge(c: &mut Criterion) {
                 hll.add(&mut src, i * 2 + 1);
             }
             let mut helper = hll.new_helper();
-            group.bench_function(BenchmarkId::new("hll5", num_regs), |b| {
+            group.bench_function(BenchmarkId::new("hll-5bit", num_regs), |b| {
                 b.iter(|| {
                     hll.merge_with_helper(
                         black_box(&mut dst),
@@ -123,7 +123,7 @@ fn bench_merge(c: &mut Criterion) {
                 hll.add(&mut src, i * 2 + 1);
             }
             let mut helper = hll.new_helper();
-            group.bench_function(BenchmarkId::new("hll6", num_regs), |b| {
+            group.bench_function(BenchmarkId::new("hll-6bit", num_regs), |b| {
                 b.iter(|| {
                     hll.merge_with_helper(
                         black_box(&mut dst),
@@ -145,7 +145,7 @@ fn bench_merge(c: &mut Criterion) {
                 hll8.add(&mut dst, i * 2);
                 hll8.add(&mut src, i * 2 + 1);
             }
-            group.bench_function(BenchmarkId::new("hll8", num_regs), |b| {
+            group.bench_function(BenchmarkId::new("hll-byte", num_regs), |b| {
                 b.iter(|| {
                     hll8.merge(black_box(&mut dst), black_box(&src));
                 });
