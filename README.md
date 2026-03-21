@@ -93,5 +93,5 @@ Union nor the Italian MUR can be held responsible for them.
 [`EstimationLogic`]: https://docs.rs/card-est-array/latest/card_est_array/traits/trait.EstimationLogic.html
 [`HyperLogLog`]: https://docs.rs/card-est-array/latest/card_est_array/impls/hyper_log_log/struct.HyperLogLog.html
 [`HyperLogLog8`]: https://docs.rs/card-est-array/latest/card_est_array/impls/hyper_log_log8/struct.HyperLogLog8.html
-[LogLog-β correction]: https://docs.rs/card_est_array/latest/card_est_array/impls/hyper_log_log/fn.beta_horner.html
+[LogLog-β correction]: https://docs.rs/card-est-array/latest/card_est_array/impls/hyper_log_log/fn.beta_horner.html
 [Rust port of the WebGraph framework]: https://crates.io/crates/webgraph

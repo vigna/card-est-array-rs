@@ -297,7 +297,7 @@ pub(crate) fn apply_correction<const BETA: bool>(
 
 /// Estimation logic implementing the HyperLogLog algorithm.
 ///
-/// This implementation use 5- or 6-bit registers and [broadword
+/// This implementation uses 5- or 6-bit registers and [broadword
 /// programming](https://doi.org/10.1145/1963405.1963493). It thus uses the
 /// minimum possible space, saving 37.5 or 25% space with respect to the
 /// [`HyperLogLog8`](crate::impls::HyperLogLog8) logic, which uses 8-bit
