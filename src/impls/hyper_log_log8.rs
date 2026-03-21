@@ -16,9 +16,9 @@ use std::{fmt, marker::PhantomData};
 /// Estimation logic implementing the HyperLogLog algorithm with byte-sized
 /// registers.
 ///
-/// This implementation uses a full byte for each register instead of packed 5–6
-/// bit registers. This approach trades 60% (for 5-bits registers) or 33.3% (for
-/// 6-bits registers) extra space with respect to
+/// This implementation uses a full byte for each register instead of packed 5–
+/// or 6-bit registers. This approach trades 60% (for 5-bit registers) or 33.3%
+/// (for 6-bit registers) extra space with respect to
 /// [`HyperLogLog`](super::HyperLogLog) for:
 ///
 /// - fast register access (byte indexing instead of bit-field extraction);

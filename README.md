@@ -31,20 +31,18 @@ estimators it is possible to compute (in time linear in the size of the estimato
 a new estimator containing the union of the elements that have been added to the
 two original estimators.
 
-This idea is at the core of [ANF], an
-algorithm for the computation of the neighborhood function (the function telling
-how many pairs of nodes are within distance _t_) that used [Flajolet–Martin
-cardinality estimators (then called probabilistic counters)]. The technique
-was then extended to [log-logarithmic cardinality estimators], with a
-significant reduction of the memory footprint, using [broadword
-programming] to merge such estimators;
-it became also evident that it could be used to compute many other interesting
-properties, such as the distance distribution and all centralities based on the
-node neighborhood functions (the functions telling, for each node, how many
-other nodes are within distance _t_). The [HyperBall algorithm],
-distributed with the [WebGraph framework], is a
-highly engineered implementation of these ideas. It has been used, for example,
-to compute the [degrees of separation of Facebook].
+This idea is at the core of [ANF], an algorithm for the computation of the
+neighborhood function (the function telling how many pairs of nodes are within
+distance _t_) that used [Flajolet–Martin cardinality estimators (then called
+probabilistic counters)]. The technique was then extended to [log-logarithmic
+cardinality estimators], with a significant reduction of the memory footprint,
+using [broadword programming] to merge such estimators; it became also evident
+that it could be used to compute many other interesting properties, such as the
+distance distribution and all centralities based on the node neighborhood
+functions (the functions telling, for each node, how many other nodes are within
+distance _t_). The [HyperBall algorithm], distributed with the [WebGraph
+framework], is a highly engineered implementation of these ideas. It has been
+used, for example, to compute the [degrees of separation of Facebook].
 
 The purpose of this crate is to lay the foundation of the infrastructure that is
 necessary to implement HyperBall in the [Rust port of the WebGraph framework].
@@ -95,5 +93,5 @@ Union nor the Italian MUR can be held responsible for them.
 [`EstimationLogic`]: https://docs.rs/card-est-array/latest/card_est_array/traits/trait.EstimationLogic.html
 [`HyperLogLog`]: https://docs.rs/card-est-array/latest/card_est_array/impls/hyper_log_log/struct.HyperLogLog.html
 [`HyperLogLog8`]: https://docs.rs/card-est-array/latest/card_est_array/impls/hyper_log_log8/struct.HyperLogLog8.html
-[LogLog-β correction]: https://docs.rs/card_est_array/latest/card_est_array/hyper_log_log/fn.beta_horner.html
+[LogLog-β correction]: https://docs.rs/card_est_array/latest/card_est_array/impls/hyper_log_log/fn.beta_horner.html
 [Rust port of the WebGraph framework]: https://crates.io/crates/webgraph
