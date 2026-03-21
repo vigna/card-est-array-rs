@@ -6,7 +6,13 @@
 
 - New `HyperLogLog8` estimation logic with byte-sized register uses
   33 to 60% extra space but is an order of magnitude faster.
+  
+### Fixed
 
+- `HyperLogLogBuilder::build` now returns a `Result`, and will return
+  an error if the register size and number is incompatible with the
+  word of the backend.
+  
 ### Changed
 
 - `HyperLogLogBuilder::build` now returns a `Result`, and will return
