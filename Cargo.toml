@@ -1,6 +1,6 @@
 [package]
 name = "card-est-array"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 description = "Infrastructure for managing large arrays of cardinality estimators."
 repository = "https://github.com/vigna/card-est-array-rs"
