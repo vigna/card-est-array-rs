@@ -11,6 +11,13 @@ pub use hyper_log_log::{HyperLogLog, HyperLogLogBuilder, HyperLogLogError, Hyper
 pub mod hyper_log_log8;
 pub use hyper_log_log8::{HyperLogLog8, HyperLogLog8Builder};
 
+pub mod hyper_log_log_vl;
+pub use hyper_log_log_vl::{
+    EncodeAndDenseFold, GammaCode, GapCodecMetadata, HyperLogLogVl, HyperLogLogVlBuilder,
+    HyperLogLogVlHelper, LosslessU64, MergeOutcome, MergeStrategy, PiCode, RiceCode,
+    SumOfCountsFastPath, UnaryCode, ValueListCodec, ZetaCode,
+};
+
 mod slice_estimator_array;
 pub use slice_estimator_array::*;
 
