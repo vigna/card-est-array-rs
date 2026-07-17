@@ -20,11 +20,11 @@ pub mod gap_codec;
 pub mod merge_strategy;
 pub use estimator::{HyperLogLogVl, HyperLogLogVlBuilder, HyperLogLogVlHelper, LosslessU64};
 pub use merge_strategy::{EncodeAndDenseFold, MergeOutcome, MergeStrategy, SumOfCountsFastPath};
-pub mod gamma;
-pub mod pi;
-pub mod rice;
-pub mod unary;
-pub mod zeta;
+mod gamma;
+mod pi;
+mod rice;
+mod unary;
+mod zeta;
 
 pub use codec::{GapCodecMetadata, ValueListCodec};
 pub use gamma::GammaCode;

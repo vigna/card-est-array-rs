@@ -124,6 +124,13 @@ where
         let data_words = dense_logic.backend_len();
         let data_capacity_bits = data_words * 64;
         let max_entries = C::max_entries(data_capacity_bits);
+        // The header word packs `writer_tell` into 32 bits and `count` into
+        // 31 (see `MODE_BIT`, `COUNT_MASK`, `WRITER_TELL_MASK`), so the body
+        // must stay within those widths.
+        assert!(
+            data_capacity_bits <= u32::MAX as usize && max_entries < (1 << 31),
+            "value-list body too large for the header field widths"
+        );
         Self {
             dense_logic,
             data_capacity_bits,
@@ -462,14 +469,14 @@ mod tests {
     }
 
     #[test]
-    fn fresh_counter_is_value_list_empty() {
+    fn test_fresh_counter_is_value_list_empty() {
         let logic = build_logic();
         let backend: Vec<u64> = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
         assert_eq!(logic.estimate(&backend), 0.0);
     }
 
     #[test]
-    fn adds_stay_exact_while_value_list_fits() {
+    fn test_adds_stay_exact_while_value_list_fits() {
         let logic = build_logic();
         let mut backend = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
         for i in 0u64..10 {
@@ -479,7 +486,7 @@ mod tests {
     }
 
     #[test]
-    fn promotion_to_dense_after_value_list_overflow() {
+    fn test_promotion_to_dense_after_value_list_overflow() {
         let logic = build_logic();
         let mut backend = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
         // At P = 10, B = 5, data_capacity_bits = 1024 * 5 = 5120. gamma-coded
@@ -499,7 +506,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_merge_matches_dense_only() {
+    fn test_dense_merge_matches_dense_only() {
         // Two counters populated with dense-triggering streams. After the merge
         // the estimate should be close to the union size (2N).
         let logic = build_logic();
@@ -519,7 +526,7 @@ mod tests {
     }
 
     #[test]
-    fn value_list_merge_stays_value_list_when_it_fits() {
+    fn test_value_list_merge_stays_value_list_when_it_fits() {
         let logic = build_logic();
         let mut a = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
         let mut b = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
@@ -534,7 +541,7 @@ mod tests {
     }
 
     #[test]
-    fn value_list_merge_promotes_on_overflow() {
+    fn test_value_list_merge_promotes_on_overflow() {
         let logic = build_logic();
         let mut a = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
         let mut b = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
@@ -561,7 +568,7 @@ mod tests {
     /// this test drifts, the A/B experiment stops isolating "value list vs
     /// no value list" and starts measuring a state divergence bug instead.
     #[test]
-    fn promotion_produces_byte_identical_dense_state() {
+    fn test_promotion_produces_byte_identical_dense_state() {
         use crate::impls::HyperLogLogBuilder;
         let vl = build_logic();
         // Force promotion via the same sequential-integer stream as above.
@@ -597,7 +604,7 @@ mod tests {
     /// binds on. Guards `LosslessU64::{to_u64, from_u64}` roundtrip on the
     /// bit pattern the codec sees.
     #[test]
-    fn promotion_byte_identical_for_usize_items() {
+    fn test_promotion_byte_identical_for_usize_items() {
         use crate::impls::HyperLogLogBuilder;
         let vl: HyperLogLogVl<
             usize,
@@ -635,7 +642,7 @@ mod tests {
     /// crate and drives one add + one merge through it, so any missing bound
     /// on `HyperLogLogVl` breaks the build here rather than at the consumer.
     #[test]
-    fn integrates_with_slice_estimator_array_for_hyperball() {
+    fn test_integrates_with_slice_estimator_array_for_hyperball() {
         use crate::impls::SliceEstimatorArray;
         use crate::traits::{
             Estimator, EstimatorArray, EstimatorArrayMut, EstimatorMut, MergeEstimator,
@@ -687,7 +694,7 @@ mod tests {
     /// insertion of the same stream. If this diverges, the perf shortcut
     /// silently changed the sketch and the paper's A/B is meaningless.
     #[test]
-    fn ceiling_fast_path_preserves_byte_parity() {
+    fn test_ceiling_fast_path_preserves_byte_parity() {
         use crate::impls::HyperLogLogBuilder;
 
         let vl = build_logic();
@@ -722,7 +729,7 @@ mod tests {
     /// baseline). Uses medium-sized value lists so both operands stay in
     /// value-list mode and the streaming path is exercised.
     #[test]
-    fn streaming_merge_matches_iterative_insert() {
+    fn test_streaming_merge_matches_iterative_insert() {
         let logic = build_logic();
         let mut a = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
         let mut b = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
@@ -752,7 +759,7 @@ mod tests {
     /// gamma plus 29 gap-1 encodings (~1 bit each), so per-batch cost is
     /// roughly 40 bits. 30 batches keeps us safely inside the 5120-bit body.
     #[test]
-    fn streaming_merge_stays_linear_on_many_calls() {
+    fn test_streaming_merge_stays_linear_on_many_calls() {
         let logic = build_logic();
         let mut dst = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
         // Prime dst with a modest run.
@@ -779,7 +786,7 @@ mod tests {
     /// a genuine compile-time knob and that both produce correct estimates on a
     /// clean-fit union.
     #[test]
-    fn merge_strategy_is_a_compile_time_parameter() {
+    fn test_merge_strategy_is_a_compile_time_parameter() {
         use super::super::EncodeAndDenseFold;
 
         fn build_logic_with<M: MergeStrategy + Clone>() -> HyperLogLogVl<
@@ -832,7 +839,7 @@ mod tests {
     /// operand overlap keeps the actual union under the codec ceiling and (b)
     /// install a dense state directly on genuine overflow.
     #[test]
-    fn encode_and_dense_fold_covers_both_outcomes() {
+    fn test_encode_and_dense_fold_covers_both_outcomes() {
         use super::super::EncodeAndDenseFold;
 
         fn build<M: MergeStrategy + Clone>() -> HyperLogLogVl<
@@ -911,7 +918,7 @@ mod tests {
     /// direct-to-dense insertion of only its own operand union — i.e. no bits
     /// leak from the first merge.
     #[test]
-    fn encode_and_dense_fold_helper_reuse_is_contamination_free() {
+    fn test_encode_and_dense_fold_helper_reuse_is_contamination_free() {
         use super::super::EncodeAndDenseFold;
         use crate::impls::HyperLogLogBuilder;
 
@@ -980,5 +987,18 @@ mod tests {
             oracle_backend.as_slice(),
             "second Dense merge must not carry state from the first",
         );
+    }
+
+    /// `add(u64::MAX)` must promote to dense instead of panicking inside
+    /// dsi-bitstream. `u64::MAX` is outside the gamma code's domain, so the
+    /// value list cannot store it as a head and the counter must fall through
+    /// to dense promotion, which handles any hashable value.
+    #[test]
+    fn test_add_u64_max_promotes_to_dense() {
+        let logic = build_logic();
+        let mut backend = vec![0u64; SliceEstimationLogic::<u64>::backend_len(&logic)];
+        logic.add(&mut backend, u64::MAX);
+        assert!(is_dense(backend[0]), "u64::MAX must force dense promotion");
+        assert!(logic.estimate(&backend) > 0.0);
     }
 }

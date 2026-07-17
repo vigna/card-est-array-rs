@@ -5,7 +5,7 @@
  */
 
 //! Shared implementation for value-list codecs. Layout:
-//! `[gamma(head + 1)] [gap_code(v_{i-1} - v_i)]*`.
+//! `[gamma(head)] [gap_code(v_{i-1} - v_i)]*`.
 
 use super::codec::{GapCodecMetadata, ValueListCodec};
 use dsi_bitstream::prelude::{
@@ -38,7 +38,7 @@ pub trait GapEncoder {
 fn predict_encoded_bits<G: GapEncoder>(values: &[u64]) -> usize {
     let mut predicted: usize = 0;
     if let Some((&first, rest)) = values.split_first() {
-        predicted += len_gamma(first.saturating_add(1)) as usize;
+        predicted += len_gamma(first) as usize;
         let mut prev = first;
         for &current in rest {
             predicted += G::len_gap(prev - current);
@@ -57,6 +57,12 @@ pub(crate) fn insert_generic<G: GapEncoder>(
     buf_capacity_bits: usize,
     value: u64,
 ) -> Result<(), ()> {
+    // `u64::MAX` is outside dsi-bitstream's gamma domain (`[0, u64::MAX)`) and
+    // so cannot be stored as a list head. Reject it before touching `buf` so
+    // the caller promotes to dense, which handles any hashable value.
+    if value == u64::MAX {
+        return Err(());
+    }
     let mut values: Vec<u64> = iter_generic::<G>(*metadata, buf).collect();
     if values.binary_search_by(|probe| value.cmp(probe)).is_ok() {
         return Ok(());
@@ -164,18 +170,19 @@ impl<'a, G: GapEncoder> GapCodecEncoder<'a, G> {
     #[allow(clippy::result_unit_err)]
     #[inline]
     pub(crate) fn push(&mut self, value: u64) -> Result<(), ()> {
+        // A `u64::MAX` head is unencodable by gamma (see `insert_generic`).
+        if self.previous.is_none() && value == u64::MAX {
+            return Err(());
+        }
         let cost = match self.previous {
-            None => len_gamma(value.saturating_add(1)) as usize,
+            None => len_gamma(value) as usize,
             Some(prev) => G::len_gap(prev - value),
         };
         if self.written + cost > self.capacity_bits {
             return Err(());
         }
         let bits = match self.previous {
-            None => self
-                .writer
-                .write_gamma(value.saturating_add(1))
-                .map_err(|_| ())?,
+            None => self.writer.write_gamma(value).map_err(|_| ())?,
             Some(prev) => G::write_gap(&mut self.writer, prev - value)?,
         };
         self.written += bits;
@@ -253,7 +260,7 @@ impl<'a, G: GapEncoder> Iterator for GapCodecIter<'a, G> {
         }
         self.remaining -= 1;
         let value = match self.previous {
-            None => self.reader.read_gamma().ok()?.saturating_sub(1),
+            None => self.reader.read_gamma().ok()?,
             Some(prev) => {
                 let gap = G::read_gap(&mut self.reader)?;
                 prev.checked_sub(gap)?
