@@ -12,10 +12,14 @@ use super::estimator::{EstimationLogic, Estimator, EstimatorMut};
 /// Arrays of estimators are useful because they share the same logic, thus
 /// saving space. Moreover, by hiding the implementation, it is possible to
 /// create estimator arrays for estimators whose [backends are
-/// slices](crate::impls::SliceEstimatorArray).
+/// slices].
+///
+/// [backends are slices]: crate::impls::SliceEstimatorArray
 pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
     /// The type of immutable estimator returned by
-    /// [`get_estimator`](EstimatorArray::get_estimator).
+    /// [`get_estimator`].
+    ///
+    /// [`get_estimator`]: EstimatorArray::get_estimator
     type Estimator<'a>: Estimator<L>
     where
         Self: 'a;
@@ -25,14 +29,22 @@ pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
 
     /// Returns the estimator at the specified index as an immutable estimator.
     ///
-    /// Note that this method will usually require some allocation, as it needs
-    /// to create a new instance of [`EstimatorArray::Estimator`].
+    /// Note that this method may require an allocation, depending on the
+    /// implementation of [`EstimatorArray::Estimator`].
+    ///
+    /// # Panics
+    ///
+    /// Implementations may panic if `index` is out of bounds.
     fn get_estimator(&self, index: usize) -> Self::Estimator<'_>;
 
     /// Returns an immutable reference to the backend of the estimator at the
     /// specified index.
     ///
     /// This method will usually require no allocation.
+    ///
+    /// # Panics
+    ///
+    /// Implementations may panic if `index` is out of bounds.
     fn get_backend(&self, index: usize) -> &L::Backend;
 
     /// Returns the number of estimators in the array.
@@ -48,21 +60,31 @@ pub trait EstimatorArray<L: EstimationLogic + ?Sized> {
 /// An array of mutable estimators sharing an [`EstimationLogic`].
 pub trait EstimatorArrayMut<L: EstimationLogic + ?Sized>: EstimatorArray<L> {
     /// The type of mutable estimator returned by
-    /// [`get_estimator_mut`](EstimatorArrayMut::get_estimator_mut).
+    /// [`get_estimator_mut`].
+    ///
+    /// [`get_estimator_mut`]: EstimatorArrayMut::get_estimator_mut
     type EstimatorMut<'a>: EstimatorMut<L>
     where
         Self: 'a;
 
     /// Returns the estimator at the specified index as a mutable estimator.
     ///
-    /// Note that this method will usually require some allocation, as it needs
-    /// to create a new instance of [`EstimatorArrayMut::EstimatorMut`].
+    /// Note that this method may require an allocation, depending on the
+    /// implementation of [`EstimatorArrayMut::EstimatorMut`].
+    ///
+    /// # Panics
+    ///
+    /// Implementations may panic if `index` is out of bounds.
     fn get_estimator_mut(&mut self, index: usize) -> Self::EstimatorMut<'_>;
 
     /// Returns a mutable reference to the backend of the estimator at the
     /// specified index.
     ///
     /// This method will usually require no allocation.
+    ///
+    /// # Panics
+    ///
+    /// Implementations may panic if `index` is out of bounds.
     fn get_backend_mut(&mut self, index: usize) -> &mut L::Backend;
 
     /// Resets all estimators in the array.
@@ -71,6 +93,10 @@ pub trait EstimatorArrayMut<L: EstimationLogic + ?Sized>: EstimatorArray<L> {
 
 /// A trait for estimator arrays that can be viewed as a [`SyncEstimatorArray`].
 pub trait AsSyncArray<L: EstimationLogic + ?Sized> {
+    /// The type of [`SyncEstimatorArray`] returned by
+    /// [`as_sync_array`].
+    ///
+    /// [`as_sync_array`]: AsSyncArray::as_sync_array
     type SyncEstimatorArray<'a>: SyncEstimatorArray<L>
     where
         Self: 'a;
@@ -86,15 +112,17 @@ pub trait AsSyncArray<L: EstimationLogic + ?Sized> {
 /// This trait has the same purpose of [`EstimatorArrayMut`], but can be shared
 /// between threads as it implements interior mutability. It follows a logic
 /// similar to a slice of
-/// [`SyncCell`](https://crates.io/crates/sync_cell_slice/): it is possible to
+/// [`SyncCell`]: it is possible to
 /// get or set the backend of an estimator, but not to obtain a reference to a
 /// backend.
 ///
 /// # Safety
 ///
-/// The methods of this trait are unsafe because multiple threads can
-/// concurrently access the same estimator array. The caller must ensure that
-/// there are no data races.
+/// The methods of this trait accessing backends are unsafe because multiple
+/// threads can concurrently access the same estimator array. The caller must
+/// ensure that there are no data races.
+///
+/// [`SyncCell`]: https://crates.io/crates/sync-cell-slice/
 pub trait SyncEstimatorArray<L: EstimationLogic + ?Sized>: Sync {
     /// Returns the logic used by the estimators in the array.
     fn logic(&self) -> &L;

@@ -1,5 +1,43 @@
 # Change Log
 
+## [Unreleased]
+
+### Changed
+
+- `HyperLogLogBuilder::log2_num_regs` and `HyperLogLog8Builder::log2_num_regs`
+  now panic if the argument is greater than 31, and `rsd` now panics if the
+  argument is not a positive finite number.
+
+- `HyperLogLogBuilder::min_log2_num_regs` never returns less than 4, the
+  minimum accepted by `log2_num_regs`.
+
+- Merge methods now check the length of both backends with a hard assertion,
+  like `add` and `estimate`; the same happens for the backends passed to
+  `SyncSliceEstimatorArray::get`/`set`, and out-of-bounds indices now panic
+  instead of being silently ignored.
+
+- `Debug` and `PartialEq` for `HyperLogLog` and `HyperLogLog8` are now
+  implemented manually and no longer require bounds on the item type `T`;
+  several unnecessary trait bounds (e.g., `H: Clone` on getters, `L: Clone`
+  on `AsRef`/`AsMut` for `DefaultEstimator`) have been removed.
+
+- The default type of the third parameter of `SyncSliceEstimatorArray` is
+  now `Box<[SyncCell<W>]>`, as the previous default `Box<[W]>` satisfied no
+  implementation.
+
+- The `Display` implementations of `HyperLogLog` and `HyperLogLog8` now
+  print the relative standard deviation with five decimal digits.
+
+### Fixed
+
+- `HyperLogLog::register_size` misplaced a division by ln 2, computing
+  ln(log₂ n / ln 2) instead of log₂ log₂ n: as a result, 6-bit registers
+  were never used, even for more than 2³² distinct elements.
+
+- `HyperLogLog8`'s SIMD merge kernels relied on debug-only assertions for
+  memory safety: in release builds, merging backends of the wrong length
+  could access memory out of bounds.
+
 ## [0.6.0] - 2026-03-21
 
 ### New

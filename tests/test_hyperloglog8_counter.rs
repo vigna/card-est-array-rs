@@ -170,7 +170,7 @@ fn do_test_merge<const BETA: bool>() {
                 if (float_size * 2.0 - est_0.estimate()).abs() / (float_size * 2.0) < 2.0 * rsd {
                     correct_0 += 1;
                 }
-                if (float_size - est_1.estimate()).abs() / (float_size * 2.0) < 2.0 * rsd {
+                if (float_size - est_1.estimate()).abs() / float_size < 2.0 * rsd {
                     correct_1 += 1;
                 }
             }
@@ -241,7 +241,7 @@ fn do_test_merge_array<const BETA: bool>() {
                 {
                     correct_0 += 1;
                 }
-                if (float_size - estimators.get_estimator(1).estimate()).abs() / (float_size * 2.0)
+                if (float_size - estimators.get_estimator(1).estimate()).abs() / float_size
                     < 2.0 * rsd
                 {
                     correct_1 += 1;

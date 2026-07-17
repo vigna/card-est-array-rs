@@ -14,8 +14,9 @@ use num_primitive::PrimitiveUnsigned;
 
 /// A convenience trait bundling the bounds required for word types used as
 /// backends for estimators, plus constants for zero and one (which avoid a
-/// dependence from the [`num-traits`](https://crates.io/crates/num-traits)
-/// crate).
+/// dependence from the [`num-traits`] crate).
+///
+/// [`num-traits`]: https://crates.io/crates/num-traits
 pub trait Word: PrimitiveUnsigned {
     const ZERO: Self;
     const ONE: Self;

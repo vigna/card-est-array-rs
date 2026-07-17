@@ -30,7 +30,7 @@ impl<L: EstimationLogic, BL: Borrow<L>, B> DefaultEstimator<L, BL, B> {
     }
 }
 
-impl<L: EstimationLogic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> AsRef<L::Backend>
+impl<L: EstimationLogic, BL: Borrow<L>, B: AsRef<L::Backend>> AsRef<L::Backend>
     for DefaultEstimator<L, BL, B>
 {
     #[inline(always)]
@@ -39,7 +39,7 @@ impl<L: EstimationLogic + Clone, BL: Borrow<L>, B: AsRef<L::Backend>> AsRef<L::B
     }
 }
 
-impl<L: EstimationLogic + Clone, BL: Borrow<L>, B: AsMut<L::Backend>> AsMut<L::Backend>
+impl<L: EstimationLogic, BL: Borrow<L>, B: AsMut<L::Backend>> AsMut<L::Backend>
     for DefaultEstimator<L, BL, B>
 {
     #[inline(always)]

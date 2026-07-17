@@ -22,28 +22,25 @@ pub struct SliceEstimatorArray<L, W = usize, S = Box<[W]>> {
 }
 
 /// A view of a [`SliceEstimatorArray`] as a [`SyncEstimatorArray`].
-pub struct SyncSliceEstimatorArray<L, W = usize, S = Box<[W]>> {
+pub struct SyncSliceEstimatorArray<L, W = usize, S = Box<[SyncCell<W>]>> {
     pub(super) logic: L,
     pub(super) backend: S,
     _marker: std::marker::PhantomData<W>,
-}
-
-unsafe impl<L, W, S> Sync for SyncSliceEstimatorArray<L, W, S>
-where
-    L: Sync,
-    W: Sync,
-    S: Sync,
-{
 }
 
 impl<L: SliceEstimationLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync>
     SyncEstimatorArray<L> for SyncSliceEstimatorArray<L, W, S>
 {
     unsafe fn set(&self, index: usize, content: &L::Backend) {
-        debug_assert_eq!(content.len(), self.logic.backend_len());
-        let offset = index * self.logic.backend_len();
-        for (c, &b) in self.backend.as_ref()[offset..].iter().zip(content) {
-            // SAFETY: we are the only ones writing to this cell
+        assert_backend_len!(self.logic, content);
+        let backend_len = self.logic.backend_len();
+        let offset = index * backend_len;
+        for (c, &b) in self.backend.as_ref()[offset..][..backend_len]
+            .iter()
+            .zip(content)
+        {
+            // SAFETY: the caller guarantees the absence of data races (see
+            // the documentation of SyncEstimatorArray).
             unsafe { c.set(b) }
         }
     }
@@ -53,14 +50,16 @@ impl<L: SliceEstimationLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync>
         &self.logic
     }
 
-    unsafe fn get(&self, index: usize, backend: &mut L::Backend) {
-        debug_assert_eq!(backend.len(), self.logic.backend_len());
-        let offset = index * self.logic.backend_len();
-        for (b, c) in backend
+    unsafe fn get(&self, index: usize, content: &mut L::Backend) {
+        assert_backend_len!(self.logic, content);
+        let backend_len = self.logic.backend_len();
+        let offset = index * backend_len;
+        for (b, c) in content
             .iter_mut()
-            .zip(self.backend.as_ref()[offset..].iter())
+            .zip(self.backend.as_ref()[offset..][..backend_len].iter())
         {
-            // SAFETY: we are the only ones reading from this cell
+            // SAFETY: the caller guarantees the absence of data races (see
+            // the documentation of SyncEstimatorArray).
             *b = unsafe { c.get() }
         }
     }
@@ -69,6 +68,8 @@ impl<L: SliceEstimationLogic<W> + Sync, W: Word, S: AsRef<[SyncCell<W>]> + Sync>
         self.backend
             .as_ref()
             .iter()
+            // SAFETY: the caller guarantees the absence of data races (see
+            // the documentation of SyncEstimatorArray).
             .for_each(|c| unsafe { c.set(W::ZERO) })
     }
 
@@ -186,5 +187,40 @@ impl<L: SliceEstimationLogic<W> + Clone, W: Word, S: AsRef<[W]> + AsMut<[W]>> Es
     #[inline(always)]
     fn clear(&mut self) {
         self.backend.as_mut().iter_mut().for_each(|v| *v = W::ZERO)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::impls::HyperLogLog8Builder;
+
+    /// A `content` slice whose length does not match the logic must be
+    /// rejected with a hard assertion; a `debug_assert` alone would let an
+    /// over-long slice silently spill into the next counter in release
+    /// builds.
+    #[test]
+    #[should_panic(expected = "does not match the expected length")]
+    fn test_sync_set_wrong_length() {
+        let logic = HyperLogLog8Builder::new().build::<u64>();
+        let mut array = SliceEstimatorArray::new(logic, 2);
+        let sync = array.as_sync_array();
+        let content = vec![0u8; 17];
+        // SAFETY: no other thread accesses the array.
+        unsafe { sync.set(0, &content) };
+    }
+
+    /// An out-of-bounds index must panic rather than silently do nothing
+    /// (`index == len()` used to be a no-op, as the unbounded `[offset..]`
+    /// slice is empty there).
+    #[test]
+    #[should_panic]
+    fn test_sync_set_index_out_of_bounds() {
+        let logic = HyperLogLog8Builder::new().build::<u64>();
+        let mut array = SliceEstimatorArray::new(logic, 2);
+        let sync = array.as_sync_array();
+        let content = vec![0u8; 16];
+        // SAFETY: no other thread accesses the array.
+        unsafe { sync.set(2, &content) };
     }
 }

@@ -4,6 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
+//! A [`HyperLogLog8`] estimation logic with byte-sized registers, using
+//! SIMD-accelerated merges, together with its
+//! [builder].
+//!
+//! [builder]: HyperLogLog8Builder
+
 use super::DefaultEstimator;
 use super::hyper_log_log::apply_correction;
 use crate::traits::{
@@ -19,7 +25,7 @@ use std::{fmt, marker::PhantomData};
 /// This implementation uses a full byte for each register instead of packed 5–
 /// or 6-bit registers. This approach trades 60% (for 5-bit registers) or 33.3%
 /// (for 6-bit registers) extra space with respect to
-/// [`HyperLogLog`](super::HyperLogLog) for:
+/// [`HyperLogLog`] for:
 ///
 /// - fast register access (byte indexing instead of bit-field extraction);
 /// - no backend alignment constraints;
@@ -55,9 +61,11 @@ use std::{fmt, marker::PhantomData};
 /// - `H`: the [`BuildHasher`] used to hash elements.
 ///
 /// - `BETA`: when `true` (the default), the
-///   [LogLog-β](super::hyper_log_log::beta_horner) bias correction is used
-///   during estimation. See [`HyperLogLog`](super::HyperLogLog) for details.
-#[derive(Debug, PartialEq)]
+///   [LogLog-β] bias correction is used
+///   during estimation. See [`HyperLogLog`] for details.
+///
+/// [`HyperLogLog`]: super::HyperLogLog
+/// [LogLog-β]: super::hyper_log_log::beta_horner
 pub struct HyperLogLog8<T, H, const BETA: bool = true> {
     build_hasher: H,
     num_regs_minus_1: u64,
@@ -67,8 +75,31 @@ pub struct HyperLogLog8<T, H, const BETA: bool = true> {
     _marker: PhantomData<T>,
 }
 
-// We implement Clone manually because we do not want to require that T is
-// Clone.
+// We implement Clone, Debug, and PartialEq manually because we do not want
+// to require the corresponding trait on T, which appears only in PhantomData.
+
+impl<T, H: fmt::Debug, const BETA: bool> fmt::Debug for HyperLogLog8<T, H, BETA> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HyperLogLog8")
+            .field("build_hasher", &self.build_hasher)
+            .field("num_regs_minus_1", &self.num_regs_minus_1)
+            .field("log2_num_regs", &self.log2_num_regs)
+            .field("num_regs", &self.num_regs)
+            .field("alpha_m_m", &self.alpha_m_m)
+            .finish()
+    }
+}
+
+impl<T, H: PartialEq, const BETA: bool> PartialEq for HyperLogLog8<T, H, BETA> {
+    fn eq(&self, other: &Self) -> bool {
+        self.build_hasher == other.build_hasher
+            && self.num_regs_minus_1 == other.num_regs_minus_1
+            && self.log2_num_regs == other.log2_num_regs
+            && self.num_regs == other.num_regs
+            && self.alpha_m_m == other.alpha_m_m
+    }
+}
+
 impl<T, H: Clone, const BETA: bool> Clone for HyperLogLog8<T, H, BETA> {
     fn clone(&self) -> Self {
         Self {
@@ -82,7 +113,7 @@ impl<T, H: Clone, const BETA: bool> Clone for HyperLogLog8<T, H, BETA> {
     }
 }
 
-impl<T, H: Clone, const BETA: bool> HyperLogLog8<T, H, BETA> {
+impl<T, H, const BETA: bool> HyperLogLog8<T, H, BETA> {
     /// Returns the base-2 logarithm of the number of registers per estimator.
     pub fn log2_num_regs(&self) -> u32 {
         self.log2_num_regs
@@ -167,7 +198,12 @@ impl<T: Hash, H: BuildHasher + Clone, const BETA: bool> MergeEstimationLogic
 
     #[inline(always)]
     fn merge_with_helper(&self, dst: &mut [u8], src: &[u8], _helper: &mut Self::Helper) {
-        debug_assert_eq!(dst.len(), src.len());
+        // These are hard assertions because the SIMD kernels of
+        // merge_max_bytes access memory in 16-byte blocks under the
+        // assumption that the length is the backend length (a multiple of 16,
+        // as log2_num_regs >= 4).
+        assert_backend_len!(self, dst);
+        assert_backend_len!(self, src);
         merge_max_bytes(dst, src);
     }
 }
@@ -176,7 +212,7 @@ impl<T, H, const BETA: bool> fmt::Display for HyperLogLog8<T, H, BETA> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "HyperLogLog8 with relative standard deviation: {}% ({} registers/estimator, 8 bits/register, {} bytes/estimator)",
+            "HyperLogLog8 with relative standard deviation {:.5}% ({} registers/estimator, 8 bits/register, {} bytes/estimator)",
             100.0 * super::HyperLogLog::rel_std(self.log2_num_regs),
             self.num_regs,
             self.num_regs,
@@ -188,14 +224,21 @@ impl<T, H, const BETA: bool> fmt::Display for HyperLogLog8<T, H, BETA> {
 ///
 /// The builder lets you configure:
 /// - the number of registers, either directly
-///   ([`log2_num_regs`](Self::log2_num_regs)) or via a target relative
-///   standard deviation ([`rsd`](Self::rsd));
-/// - the hash function ([`build_hasher`](Self::build_hasher));
-/// - whether [LogLog-β bias correction](super::hyper_log_log::beta_horner) is
-///   enabled ([`beta`](Self::beta)).
+///   ([`log2_num_regs`]) or via a target relative
+///   standard deviation ([`rsd`]);
+/// - the hash function ([`build_hasher`]);
+/// - whether [LogLog-β bias correction] is
+///   enabled ([`beta`]).
 ///
-/// Call [`build`](Self::build) to obtain the configured [`HyperLogLog8`]
+/// Call [`build`] to obtain the configured [`HyperLogLog8`]
 /// logic.
+///
+/// [`log2_num_regs`]: Self::log2_num_regs
+/// [`rsd`]: Self::rsd
+/// [`build_hasher`]: Self::build_hasher
+/// [LogLog-β bias correction]: super::hyper_log_log::beta_horner
+/// [`beta`]: Self::beta
+/// [`build`]: Self::build
 #[derive(Debug, Clone)]
 pub struct HyperLogLog8Builder<H, const BETA: bool = true> {
     build_hasher: H,
@@ -229,9 +272,13 @@ impl<H, const BETA: bool> HyperLogLog8Builder<H, BETA> {
     ///
     /// # Panics
     ///
-    /// If the resulting number of registers is less than 16 (i.e., `rsd` is
-    /// too large).
+    /// If `rsd` is not a positive finite number, or so small that the
+    /// logarithm of the required number of registers exceeds 31.
     pub fn rsd(self, rsd: f64) -> Self {
+        assert!(
+            rsd.is_finite() && rsd > 0.0,
+            "the relative standard deviation must be a positive finite number"
+        );
         self.log2_num_regs(super::HyperLogLog::log2_num_of_registers(rsd))
     }
 
@@ -246,20 +293,26 @@ impl<H, const BETA: bool> HyperLogLog8Builder<H, BETA> {
     ///
     /// # Panics
     ///
-    /// If `log2_num_regs` is less than 4.
+    /// If `log2_num_regs` is less than 4 or greater than 31.
     pub const fn log2_num_regs(mut self, log2_num_regs: u32) -> Self {
         assert!(
             log2_num_regs >= 4,
             "the logarithm of the number of registers per estimator should be at least 4"
+        );
+        assert!(
+            log2_num_regs <= 31,
+            "the logarithm of the number of registers per estimator should be at most 31"
         );
         self.log2_num_regs = log2_num_regs;
         self
     }
 
     /// Enables or disables the [LogLog-β bias
-    /// correction](super::hyper_log_log::beta_horner) in the estimate.
+    /// correction] in the estimate.
     ///
     /// See [`HyperLogLog8`] for details.
+    ///
+    /// [LogLog-β bias correction]: super::hyper_log_log::beta_horner
     pub fn beta<const BETA2: bool>(self) -> HyperLogLog8Builder<H, BETA2> {
         HyperLogLog8Builder {
             build_hasher: self.build_hasher,
@@ -389,4 +442,62 @@ fn merge_max_bytes(dst: &mut [u8], src: &[u8]) {
 #[cfg(not(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64")))]
 fn merge_max_bytes(dst: &mut [u8], src: &[u8]) {
     merge_max_bytes_scalar(dst, src)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Backends of the wrong length must be rejected with a hard assertion:
+    /// the SIMD merge kernels rely on the backend length being a multiple of
+    /// 16, so a `debug_assert` alone would make out-of-bounds access
+    /// reachable from safe code in release builds.
+    #[test]
+    #[should_panic(expected = "does not match the expected length")]
+    fn test_merge_backend_length_mismatch() {
+        let logic = HyperLogLog8Builder::new().build::<u64>();
+        let mut dst = vec![0u8; 8];
+        let src = vec![0u8; 8];
+        logic.merge(&mut dst, &src);
+    }
+
+    #[test]
+    #[should_panic(expected = "at most 31")]
+    fn test_log2_num_regs_too_large() {
+        let _ = HyperLogLog8Builder::new().log2_num_regs(32);
+    }
+
+    /// `Debug`, `Clone`, and `PartialEq` on the logic must not put any bound
+    /// on the item type `T`, and inherent methods must not require `H: Clone`.
+    #[test]
+    fn test_logic_traits_do_not_bound_t() {
+        struct Plain;
+
+        #[derive(Clone, Debug, PartialEq)]
+        struct Bh;
+        impl BuildHasher for Bh {
+            type Hasher = DefaultHasher;
+            fn build_hasher(&self) -> DefaultHasher {
+                DefaultHasher::new()
+            }
+        }
+
+        let a = HyperLogLog8Builder::new().build_hasher(Bh).build::<Plain>();
+        let b = a.clone();
+        assert!(!format!("{a:?}").is_empty());
+        assert_eq!(a, b);
+
+        // The getter must be available without `H: Clone`.
+        struct NonCloneBh;
+        impl BuildHasher for NonCloneBh {
+            type Hasher = DefaultHasher;
+            fn build_hasher(&self) -> DefaultHasher {
+                DefaultHasher::new()
+            }
+        }
+        let c = HyperLogLog8Builder::new()
+            .build_hasher(NonCloneBh)
+            .build::<u64>();
+        assert_eq!(c.log2_num_regs(), 4);
+    }
 }

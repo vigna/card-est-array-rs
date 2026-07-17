@@ -21,24 +21,32 @@ use std::borrow::Borrow;
 ///       concrete representation of the estimator state.
 ///     - `Estimator<'a>`: the type of an estimator of this kind.
 /// * A method to create a new estimator:
-///   [`new_estimator`](EstimationLogic::new_estimator).
+///   [`new_estimator`].
 /// * A method to add elements to an estimator, given its backend:
-///   [`add`](EstimationLogic::add).
-/// * Methods to manipulate backends: [`estimate`](EstimationLogic::estimate),
-///   [`clear`](EstimationLogic::clear), and [`set`](EstimationLogic::set).
+///   [`add`].
+/// * Methods to manipulate backends: [`estimate`],
+///   [`clear`], and [`set`].
 ///
 /// By providing methods based on backends, an [`EstimationLogic`] can be used
 /// to manipulate families of estimators with the same backend and the same
 /// configuration (i.e., precision) in a controlled way, and saving space by
 /// sharing common parameters. This is particularly useful to build [arrays of
-/// cardinality estimators](crate::traits::EstimatorArray), which are arrays of
+/// cardinality estimators], which are arrays of
 /// estimators sharing the same logic, but the same technique can be applied
 /// to any kind of container (e.g., hash maps or sets of backends).
 ///
 /// If you plan to use a small number of non-related estimators, we suggest you
-/// [create](EstimationLogic::new_estimator) them and use their methods. More
+/// [create] them and use their methods. More
 /// complex applications, coordinating large numbers of estimators, will find
 /// backend-based methods useful.
+///
+/// [`new_estimator`]: EstimationLogic::new_estimator
+/// [`add`]: EstimationLogic::add
+/// [`estimate`]: EstimationLogic::estimate
+/// [`clear`]: EstimationLogic::clear
+/// [`set`]: EstimationLogic::set
+/// [arrays of cardinality estimators]: crate::traits::EstimatorArray
+/// [create]: EstimationLogic::new_estimator
 pub trait EstimationLogic {
     /// The type of items.
     type Item;
@@ -75,18 +83,24 @@ pub trait EstimationLogic {
 ///
 /// Since often merging requires additional allocation (usually, to hold
 /// temporary results sized like a backend), this trait provides two methods:
-/// [`merge`](MergeEstimationLogic::merge) and
-/// [`merge_with_helper`](MergeEstimationLogic::merge_with_helper). The first
+/// [`merge`] and
+/// [`merge_with_helper`]. The first
 /// one is simpler to use, but it might cause excessive allocation if used
 /// repeatedly. The second one requires a helper to be provided, but it allows
 /// to reuse the helper for several merge operations.
+///
+/// [`merge`]: MergeEstimationLogic::merge
+/// [`merge_with_helper`]: MergeEstimationLogic::merge_with_helper
 pub trait MergeEstimationLogic: EstimationLogic {
     /// The type of the helper used in merge calculations.
     ///
     /// Merge calculation might require temporary allocations. To mitigate
     /// excessive allocation, it is possible to [obtain a
-    /// helper](MergeEstimationLogic::new_helper) and reuse it for several
-    /// [merge operations](MergeEstimationLogic::merge_with_helper).
+    /// helper] and reuse it for several
+    /// [merge operations].
+    ///
+    /// [obtain a helper]: MergeEstimationLogic::new_helper
+    /// [merge operations]: MergeEstimationLogic::merge_with_helper
     type Helper;
 
     /// Creates a new helper to use in merge operations.
@@ -107,8 +121,20 @@ pub trait MergeEstimationLogic: EstimationLogic {
     );
 }
 
-/// Trait implemented by [estimation logics](EstimationLogic) whose backend is a
+/// Trait implemented by [estimation logics] whose backend is a
 /// slice of elements of some type.
+///
+/// Implementations must guarantee that the slice of
+/// [`backend_len`] zero elements is the
+/// backend of an empty estimator: structures such as
+/// [`SliceEstimatorArray`] rely on this
+/// property to initialize and clear arrays of backends without invoking
+/// [`clear`] on each estimator.
+///
+/// [estimation logics]: EstimationLogic
+/// [`backend_len`]: SliceEstimationLogic::backend_len
+/// [`SliceEstimatorArray`]: crate::impls::SliceEstimatorArray
+/// [`clear`]: EstimationLogic::clear
 pub trait SliceEstimationLogic<T>: EstimationLogic<Backend = [T]> {
     /// The number of elements of type `T` in a backend.
     fn backend_len(&self) -> usize;
@@ -165,8 +191,10 @@ pub trait EstimatorMut<L: EstimationLogic + ?Sized>: Estimator<L> + AsMut<L::Bac
     /// Sets the contents of `self` to the given backend.
     ///
     /// If you need to set to the content of another estimator, just use
-    /// [`as_ref`](AsRef) on the estimator. This approach makes it
+    /// [`as_ref`] on the estimator. This approach makes it
     /// possible to extract content from both owned and non-owned estimators.
+    ///
+    /// [`as_ref`]: AsRef
     fn set(&mut self, backend: &L::Backend);
 }
 
@@ -175,8 +203,10 @@ pub trait MergeEstimator<L: MergeEstimationLogic + ?Sized>: EstimatorMut<L> {
     /// Merges a backend into `self`.
     ///
     /// If you need to merge with the content of another estimator, just use
-    /// [`as_ref`](AsRef) on the estimator. This approach
+    /// [`as_ref`] on the estimator. This approach
     /// makes it possible to merge both owned and non-owned estimators.
+    ///
+    /// [`as_ref`]: AsRef
     fn merge(&mut self, backend: &L::Backend) {
         let mut helper = self.logic().new_helper();
         self.merge_with_helper(backend, &mut helper);
@@ -186,7 +216,9 @@ pub trait MergeEstimator<L: MergeEstimationLogic + ?Sized>: EstimatorMut<L> {
     /// excessive allocations.
     ///
     /// If you need to merge with the content of another estimator, just use
-    /// [`as_ref`](AsRef) on the estimator. This approach makes it
+    /// [`as_ref`] on the estimator. This approach makes it
     /// possible to merge both owned and non-owned estimators.
+    ///
+    /// [`as_ref`]: AsRef
     fn merge_with_helper(&mut self, backend: &L::Backend, helper: &mut L::Helper);
 }
