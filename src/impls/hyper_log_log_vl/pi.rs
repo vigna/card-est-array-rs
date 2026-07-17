@@ -11,6 +11,9 @@ use dsi_bitstream::prelude::{
     BE, BufBitReader, BufBitWriter, MemWordReader, MemWordWriterSlice, PiRead, PiWrite, len_pi,
 };
 
+/// Value-list codec whose gaps are pi codes carrying `K` low bits verbatim.
+///
+/// Larger `K` shifts the optimum toward larger gaps.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PiCode<const K: usize>;
 
@@ -51,7 +54,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_round_trip() {
+    fn test_empty_round_trip() {
         let buf = buffer(64);
         let metadata = GapCodecMetadata::default();
         let decoded: Vec<u64> = PiCode::<2>::iter(metadata, &buf).collect();
@@ -59,7 +62,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_small_integers_round_trip_at_k2() {
+    fn test_dense_small_integers_round_trip_at_k2() {
         let mut buf = buffer(512);
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -73,7 +76,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_small_integers_round_trip_at_k3() {
+    fn test_dense_small_integers_round_trip_at_k3() {
         let mut buf = buffer(1024);
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -87,7 +90,7 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_insert_is_noop() {
+    fn test_duplicate_insert_is_noop() {
         let mut buf = buffer(128);
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();

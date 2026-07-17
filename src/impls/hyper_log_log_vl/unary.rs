@@ -11,6 +11,10 @@ use dsi_bitstream::prelude::{
     BE, BitRead, BitWrite, BufBitReader, BufBitWriter, MemWordReader, MemWordWriterSlice,
 };
 
+/// Value-list codec whose gaps are unary codes.
+///
+/// Optimal only for gaps of one, so it suits the densest consecutive-id runs
+/// and otherwise serves as a baseline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct UnaryCode;
 
@@ -50,7 +54,7 @@ mod tests {
 
     /// Dense small integers round-trip.
     #[test]
-    fn dense_small_integers_round_trip() {
+    fn test_dense_small_integers_round_trip() {
         let mut buf = std::vec![0u64; 16];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -65,7 +69,7 @@ mod tests {
 
     /// Predicted bit count matches `writer_tell`.
     #[test]
-    fn writer_tell_matches_predicted_bits() {
+    fn test_writer_tell_matches_predicted_bits() {
         let mut buf = std::vec![0u64; 4];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -80,7 +84,7 @@ mod tests {
 
     /// Duplicate inserts are no-ops.
     #[test]
-    fn duplicate_insert_is_noop() {
+    fn test_duplicate_insert_is_noop() {
         let mut buf = std::vec![0u64; 4];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -94,7 +98,7 @@ mod tests {
 
     /// Overflow leaves state untouched.
     #[test]
-    fn overflow_leaves_state_untouched() {
+    fn test_overflow_leaves_state_untouched() {
         let mut buf = std::vec![0u64; 1];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();

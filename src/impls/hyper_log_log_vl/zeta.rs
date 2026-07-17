@@ -12,6 +12,9 @@ use dsi_bitstream::prelude::{
     len_zeta,
 };
 
+/// Value-list codec whose gaps are zeta codes tuned by `K`.
+///
+/// Fits power-law gap distributions. `ZetaCode<1>` coincides with `GammaCode`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ZetaCode<const K: usize>;
 
@@ -52,7 +55,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_round_trip() {
+    fn test_empty_round_trip() {
         let buf = buffer(64);
         let metadata = GapCodecMetadata::default();
         let decoded: Vec<u64> = ZetaCode::<3>::iter(metadata, &buf).collect();
@@ -60,7 +63,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_small_integers_round_trip_at_k3() {
+    fn test_dense_small_integers_round_trip_at_k3() {
         let mut buf = buffer(512);
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -74,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_small_integers_round_trip_at_k2() {
+    fn test_dense_small_integers_round_trip_at_k2() {
         let mut buf = buffer(512);
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -88,7 +91,7 @@ mod tests {
     }
 
     #[test]
-    fn duplicate_insert_is_noop() {
+    fn test_duplicate_insert_is_noop() {
         let mut buf = buffer(128);
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();

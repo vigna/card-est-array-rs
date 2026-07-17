@@ -12,6 +12,10 @@ use dsi_bitstream::prelude::{
     len_gamma,
 };
 
+/// Value-list codec whose gaps are Elias gamma codes.
+///
+/// Parameter-free and near-optimal for the tiny gaps of dense id runs, so it
+/// is the default codec.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GammaCode;
 
@@ -51,7 +55,7 @@ mod tests {
 
     /// Empty list round-trips.
     #[test]
-    fn empty_round_trip() {
+    fn test_empty_round_trip() {
         let buf = std::vec![0u64; 4];
         let metadata = GapCodecMetadata::default();
         assert_eq!(metadata.count, 0);
@@ -62,7 +66,7 @@ mod tests {
 
     /// Single value round-trips.
     #[test]
-    fn single_value_round_trip() {
+    fn test_single_value_round_trip() {
         let mut buf = std::vec![0u64; 4];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -74,7 +78,7 @@ mod tests {
 
     /// Dense small integers round-trip.
     #[test]
-    fn dense_small_integers_round_trip() {
+    fn test_dense_small_integers_round_trip() {
         let mut buf = std::vec![0u64; 16];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -89,7 +93,7 @@ mod tests {
 
     /// Duplicate inserts are no-ops.
     #[test]
-    fn duplicate_insert_is_noop() {
+    fn test_duplicate_insert_is_noop() {
         let mut buf = std::vec![0u64; 4];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -103,7 +107,7 @@ mod tests {
 
     /// Overflow leaves state untouched.
     #[test]
-    fn overflow_leaves_state_untouched() {
+    fn test_overflow_leaves_state_untouched() {
         let mut buf = std::vec![0u64; 1];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();

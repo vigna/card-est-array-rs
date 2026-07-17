@@ -12,6 +12,9 @@ use dsi_bitstream::prelude::{
     len_rice,
 };
 
+/// Value-list codec whose gaps are Rice codes with parameter `2^LOG2_B`.
+///
+/// `LOG2_B` sets how many low bits are carried below the unary quotient.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RiceCode<const LOG2_B: usize>;
 
@@ -49,7 +52,7 @@ mod tests {
 
     /// Rice-3 dense small integers round-trip.
     #[test]
-    fn dense_small_integers_rice3_round_trip() {
+    fn test_dense_small_integers_rice3_round_trip() {
         let mut buf = std::vec![0u64; 16];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -64,7 +67,7 @@ mod tests {
 
     /// Rice-0 matches unary.
     #[test]
-    fn rice_0_matches_unary_semantics() {
+    fn test_rice_0_matches_unary_semantics() {
         let mut buf = std::vec![0u64; 4];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -79,7 +82,7 @@ mod tests {
 
     /// Rice-8 round-trip.
     #[test]
-    fn rice_8_round_trip() {
+    fn test_rice_8_round_trip() {
         let mut buf = std::vec![0u64; 16];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
@@ -103,7 +106,7 @@ mod tests {
 
     /// Duplicate inserts are no-ops.
     #[test]
-    fn duplicate_insert_is_noop() {
+    fn test_duplicate_insert_is_noop() {
         let mut buf = std::vec![0u64; 4];
         let capacity_bits = buf.len() * 64;
         let mut metadata = GapCodecMetadata::default();
