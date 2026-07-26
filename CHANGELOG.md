@@ -44,7 +44,8 @@
 
 - New `HyperLogLog8` estimation logic with byte-sized register uses
   33 to 60% extra space but is an order of magnitude faster.
-  
+- New `HyperLogLogVl` estimation logic. Counters start as an exact, prefix-coded value list and promote in place to a byte-identical dense `HyperLogLog` on overflow, improving accuracy at low cardinality on power-law graphs.
+
 ### Fixed
 
 - `HyperLogLogBuilder::build` now returns a `Result`, and will return
